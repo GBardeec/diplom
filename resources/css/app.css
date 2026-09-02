@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    .shopify-page [class*="text-white"] { color: #202223 !important; }
+    .shopify-page [class*="text-purple"] { color: #008060 !important; }
+    .shopify-page [class*="text-emerald"] { color: #008060 !important; }
+    .shopify-page [class*="text-amber"] { color: #916a00 !important; }
+    .shopify-page [class*="bg-white/"] { background-color: #ffffff !important; }
+    .shopify-page [class*="bg-black/"] { background-color: #f6f6f7 !important; }
+    .shopify-page [class*="bg-gradient-to-r"],
+    .shopify-page [class*="bg-gradient-to-br"] { background: #008060 !important; }
+    .shopify-page [class*="border-white/"] { border-color: #e1e3e5 !important; }
+    .shopify-page [class*="hover:bg-white/"]:hover { background-color: #f1f8f5 !important; }
+    .shopify-page button[class*="bg-gradient"] { color: #ffffff !important; }
+    .shopify-page .shopify-level-badge { background: #008060 !important; color: #ffffff !important; }
+}
