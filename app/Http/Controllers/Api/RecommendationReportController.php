@@ -36,14 +36,6 @@ class RecommendationReportController extends Controller
         return response()->json(['data' => $this->payload($report, $this->recommendations->recommend($report->input_data))]);
     }
 
-    public function update(Request $request, string $reportUuid)
-    {
-        $report = RecommendationReport::where('report_uuid', $reportUuid)->firstOrFail();
-        $input = $this->validated($request);
-        $report->update(['input_data' => $input, 'last_viewed_at' => now()]);
-        return response()->json(['data' => $this->payload($report, $this->recommendations->recommend($input))]);
-    }
-
     private function validated(Request $request): array
     {
         return $request->validate([

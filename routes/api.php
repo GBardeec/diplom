@@ -5,4 +5,3 @@ use Illuminate\Support\Facades\Route;
 
 Route::post('/recommendations', [RecommendationReportController::class, 'store']);
 Route::get('/recommendations/{reportUuid}', [RecommendationReportController::class, 'show']);
-Route::put('/recommendations/{reportUuid}', [RecommendationReportController::class, 'update']);
