@@ -17,7 +17,9 @@ class RecommendationReportController extends Controller
         $input = $this->validated($request);
         $report = RecommendationReport::create([
             'report_uuid' => (string) Str::uuid(),
-            'session_id' => $input['session_id'],
+            // Отчёт открывается по уникальной ссылке; дополнительная привязка
+            // к браузерной сессии для него не нужна.
+            'session_id' => (string) Str::uuid(),
             'input_data' => $input,
             'view_count' => 1,
             'last_viewed_at' => now(),
@@ -38,7 +40,6 @@ class RecommendationReportController extends Controller
     {
         $report = RecommendationReport::where('report_uuid', $reportUuid)->firstOrFail();
         $input = $this->validated($request);
-        abort_unless(hash_equals($report->session_id, $input['session_id']), 403, 'Доступ запрещён.');
         $report->update(['input_data' => $input, 'last_viewed_at' => now()]);
         return response()->json(['data' => $this->payload($report, $this->recommendations->recommend($input))]);
     }
@@ -46,7 +47,6 @@ class RecommendationReportController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
-            'session_id' => ['required', 'string', 'max:100'],
             'skills' => ['nullable', 'array', 'max:50'], 'skills.*' => ['integer', 'exists:skills,id'],
             'group_id' => ['nullable', 'integer', 'exists:vacancy_groups,id'],
             'category_id' => ['nullable', 'integer', 'exists:vacancy_categories,id'],
