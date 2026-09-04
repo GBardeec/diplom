@@ -14,14 +14,16 @@ class RecommendationService
         $vacancies = $this->marketQuery($filters, $skills)->limit(500)->get();
         $qualifications = Qualification::orderBy('id')->get();
         $current = $this->currentLevel($filters, $vacancies, $qualifications);
-        $opportunities = $this->opportunities($vacancies, $skills);
-        $gaps = $this->skillGaps($vacancies, $skills);
         $next = $qualifications
             ->filter(fn ($item) => $this->levelRank($item) > $this->levelRank($current))
             ->sortBy(fn ($item) => $this->levelRank($item))
             ->first();
+        $nextVacancies = $next
+            ? $this->marketQuery($filters, [])->where('qualification_id', $next->id)->limit(500)->get()
+            : collect();
+        $opportunities = $this->opportunities($vacancies, $skills);
+        $gaps = $this->skillGaps($nextVacancies, $skills);
         $assessment = $this->assessment($filters, $current);
-        $readiness = $this->readiness($filters, $next, $skills);
 
         return [
             'profile' => [
@@ -35,11 +37,10 @@ class RecommendationService
                 'skills_to_build' => $gaps,
             ],
             'assessment' => $assessment,
-            'readiness' => $readiness,
-            'portfolio_evidence' => $this->portfolioEvidence($next, $gaps),
+            'portfolio_evidence' => $this->portfolioEvidence($current, $next, $gaps),
             'roadmap' => [
                 ['title' => 'Закрепить текущий уровень', 'text' => 'Соберите примеры задач и проектов, которые подтверждают выбранные навыки.'],
-                ['title' => 'Закрыть дефицит навыков', 'text' => $gaps ? 'Начните с: '.implode(', ', array_slice($gaps, 0, 3)).'.' : 'Продолжайте углублять выбранную специализацию.'],
+                ['title' => 'Закрыть дефицит навыков', 'text' => $gaps ? 'Начните с: '.implode(', ', array_column(array_slice($gaps, 0, 3), 'title')).'.' : 'Продолжайте углублять выбранную специализацию.'],
                 ['title' => 'Подготовить следующий переход', 'text' => $next ? "Ориентир следующего шага — {$next->title}." : 'Вы уже на верхнем доступном уровне модели.'],
             ],
             'meta' => ['total' => $vacancies->count(), 'message' => $skills ? 'Профиль составлен по вашим навыкам и данным вакансий.' : 'Добавьте навыки, чтобы сделать профиль точнее.'],
@@ -126,34 +127,28 @@ class RecommendationService
         ];
     }
 
-    private function readiness(array $filters, ?Qualification $next, array $skillIds): array
+    private function portfolioEvidence(Qualification $current, ?Qualification $next, array $gaps): array
     {
-        if (!$next) return ['status' => 'Верхний уровень', 'summary' => 'В модели нет следующей ступени для сравнения.', 'matched' => 0, 'total' => 0];
+        $skills = implode(', ', array_column(array_slice($gaps, 0, 3), 'title'));
 
-        $vacancies = $this->marketQuery($filters, [])->where('qualification_id', $next->id)->limit(500)->get();
-        $marketSkills = $vacancies->flatMap->skills->unique('id');
-        $matched = $marketSkills->whereIn('id', $skillIds)->count();
-        $total = $marketSkills->count();
-        $ratio = $total ? $matched / $total : 0;
-        $status = $ratio >= .6 ? 'Высокая' : ($ratio >= .3 ? 'Средняя' : 'Начальная');
+        if (strcasecmp($current->title, 'Middle') === 0) {
+            return [
+                ['title' => 'Сложная задача целиком', 'text' => 'Опишите задачу, которую довели от постановки до результата: ограничения, решения и измеримый эффект.'],
+                ['title' => 'Техническое решение', 'text' => 'Покажите пример выбора между вариантами: что сравнивали, почему выбрали подход и какие риски учли.'],
+                ['title' => 'Влияние на команду', 'text' => 'Подготовьте пример: код-ревью, помощь коллеге, улучшение процесса или договорённости команды.'],
+            ];
+        }
+
+        if (in_array(strtolower($current->title), ['senior', 'lead', 'head'], true)) {
+            return [
+                ['title' => 'Решение для продукта или команды', 'text' => 'Покажите, как ваше решение повлияло на качество, скорость разработки или бизнес-результат.'],
+                ['title' => 'Архитектурный компромисс', 'text' => 'Опишите значимое техническое решение, альтернативы и последствия выбранного подхода.'],
+                ['title' => 'Развитие людей', 'text' => 'Подготовьте пример наставничества, технического лидерства или выстраивания процесса.'],
+            ];
+        }
 
         return [
-            'status' => $status,
-            'matched' => $matched,
-            'total' => $total,
-            'summary' => $total
-                ? "Для уровня {$next->title} у вас совпадает {$matched} из {$total} наиболее частых навыков в подходящих вакансиях."
-                : "Недостаточно вакансий уровня {$next->title}, чтобы оценить готовность по рынку.",
-        ];
-    }
-
-    private function portfolioEvidence(?Qualification $next, array $gaps): array
-    {
-        $role = $next?->title ? "для уровня {$next->title}" : 'для следующей роли';
-        $skills = implode(', ', array_slice($gaps, 0, 3));
-
-        return [
-            ['title' => 'Завершённый проект', 'text' => "Соберите небольшой, но законченный проект {$role}".($skills ? ", где примените {$skills}." : '.')],
+            ['title' => 'Завершённый проект', 'text' => 'Соберите небольшой, но законченный проект'.($skills ? ", где примените {$skills}." : '.')],
             ['title' => 'Понятное описание решений', 'text' => 'Добавьте README: цель проекта, запуск, архитектура и ключевые технические решения.'],
             ['title' => 'Примеры опыта', 'text' => 'Подготовьте 2–3 истории: задача, ваше решение, результат и чему вы научились.'],
         ];
@@ -173,7 +168,20 @@ class RecommendationService
 
     private function skillGaps($vacancies, array $skillIds): array
     {
-        return $vacancies->flatMap->skills->reject(fn ($skill) => in_array($skill->id, $skillIds, true))
-            ->countBy('id')->sortDesc()->take(5)->keys()->map(fn ($id) => optional($vacancies->flatMap->skills->firstWhere('id', $id))->title)->filter()->values()->all();
+        $total = $vacancies->count();
+        if (!$total) return [];
+
+        return $vacancies->flatMap->skills
+            ->reject(fn ($skill) => in_array($skill->id, $skillIds, true))
+            ->groupBy('id')
+            ->sortByDesc(fn ($items) => $items->count())
+            ->take(5)
+            ->map(fn ($items) => [
+                'title' => $items->first()->title,
+                'percent' => (int) round($items->count() / $total * 100),
+                'vacancies_count' => $items->count(),
+            ])
+            ->values()
+            ->all();
     }
 }
