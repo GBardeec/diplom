@@ -151,6 +151,27 @@
                             </div>
                         </div>
 
+                        <!-- Динамика публикаций -->
+                        <div
+                            v-if="publicationTimeline.length"
+                            class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
+                        >
+                            <div class="flex items-baseline justify-between gap-3">
+                                <h3 class="text-lg font-semibold text-[#202223]">Динамика публикаций</h3>
+                                <span class="text-xs text-[#6d7175]">Последние 14 дней</span>
+                            </div>
+                            <p class="mt-1 text-sm text-[#616161]">Количество вакансий по дате публикации.</p>
+                            <div class="mt-5 grid h-40 [grid-template-columns:repeat(14,minmax(0,1fr))] items-end gap-1" aria-label="График публикаций вакансий">
+                                <div v-for="point in publicationTimeline" :key="point.date" class="flex h-full min-w-0 flex-col justify-end">
+                                    <span v-if="point.count" class="mb-1 text-center text-[10px] font-semibold text-[#4a4f54]">{{ point.count }}</span>
+                                    <div class="rounded-t bg-[#008060] transition-all" :class="point.count ? 'min-h-1.5' : 'h-1 bg-[#dfe3e0]'" :style="point.count ? { height: `${Math.max(8, Math.round(point.count / maxPublicationCount * 100))}%` } : undefined" :title="`${formatPublicationDate(point.date)}: ${vacancyLabel(point.count)}`"></div>
+                                </div>
+                            </div>
+                            <div class="mt-2 grid [grid-template-columns:repeat(14,minmax(0,1fr))] gap-1 text-center text-[9px] text-[#6d7175]">
+                                <span v-for="point in publicationTimeline" :key="`${point.date}-label`">{{ formatPublicationDate(point.date) }}</span>
+                            </div>
+                        </div>
+
                         <!-- Зарплатная статистика -->
                         <div
                             v-if="selectedCategory?.salary_stats && selectedCategory.salary_stats.avg_salary > 0"
@@ -316,6 +337,9 @@ const selectedTreeNode = ref(null);
 const selectedRootId = ref(null);
 let modalCloseTimer = null;
 
+const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
+const maxPublicationCount = computed(() => Math.max(1, ...publicationTimeline.value.map(point => point.count)));
+
 // Фильтрация категорий - исключаем "Другое" (sort_order === 99)
 const mainCategories = computed(() => {
     return props.categories.filter(c => (c.sort_order || 0) !== 99);
@@ -418,6 +442,11 @@ const getIconForCategory = () => '';
 const formatSalaryValue = (value) => {
     if (!value || value === 0) return 'Не указано';
     return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
+};
+
+const formatPublicationDate = (value) => {
+    const date = new Date(`${value}T00:00:00`);
+    return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit' }).format(date);
 };
 
 const getEmploymentType = (type) => {

@@ -36,8 +36,9 @@ class HierarchyController extends Controller
                     'salary_stats' => $stats['salary_stats'],
                     'top_skills' => $stats['top_skills'],
                     'top_locations' => $stats['top_locations'],
-                    'grades_distribution' => $stats['grades_distribution'],
-                    'employment_stats' => $stats['employment_stats'],
+                'grades_distribution' => $stats['grades_distribution'],
+                'employment_stats' => $stats['employment_stats'],
+                'publication_timeline' => $stats['publication_timeline'],
                 ];
             });
 
@@ -74,6 +75,7 @@ class HierarchyController extends Controller
                 'top_locations' => [],
                 'grades_distribution' => [],
                 'employment_stats' => [],
+                'publication_timeline' => [],
             ];
         }
 
@@ -209,6 +211,27 @@ class HierarchyController extends Controller
                 ($employmentStats[$type] ?? 0) + 1;
         }
 
+        // Последние 14 календарных дней относительно самой свежей публикации.
+        // Пустые дни также включаем, чтобы график показывал реальную динамику.
+        $publicationRows = DB::table('vacancies')
+            ->whereIn('id', $vacancyIds)
+            ->whereNotNull('published_at')
+            ->selectRaw('DATE(published_at) as published_date, COUNT(*) as count')
+            ->groupByRaw('DATE(published_at)')
+            ->orderBy('published_date')
+            ->get();
+
+        $publicationTimeline = [];
+        if ($publicationRows->isNotEmpty()) {
+            $countsByDate = $publicationRows->pluck('count', 'published_date');
+            $latestDate = \Illuminate\Support\Carbon::parse($publicationRows->last()->published_date);
+
+            $publicationTimeline = collect(range(13, 0))->map(function (int $offset) use ($latestDate, $countsByDate) {
+                $date = $latestDate->copy()->subDays($offset)->toDateString();
+                return ['date' => $date, 'count' => (int) ($countsByDate[$date] ?? 0)];
+            })->all();
+        }
+
         // Количество уникальных компаний (если есть поле company_id)
 
         // Количество уникальных локаций
@@ -237,5 +260,6 @@ class HierarchyController extends Controller
             'top_locations' => $topLocations,
             'grades_distribution' => $gradesDistribution,
             'employment_stats' => $employmentStats,
+            'publication_timeline' => $publicationTimeline,
         ];
     }}
