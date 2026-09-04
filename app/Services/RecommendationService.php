@@ -16,7 +16,10 @@ class RecommendationService
         $current = $this->currentLevel($filters, $vacancies, $qualifications);
         $opportunities = $this->opportunities($vacancies, $skills);
         $gaps = $this->skillGaps($vacancies, $skills);
-        $next = $qualifications->first(fn ($item) => $item->id > $current->id);
+        $next = $qualifications
+            ->filter(fn ($item) => $this->levelRank($item) > $this->levelRank($current))
+            ->sortBy(fn ($item) => $this->levelRank($item))
+            ->first();
 
         return [
             'profile' => [
@@ -70,6 +73,18 @@ class RecommendationService
         if (empty($filters['skills'])) return $qualifications->first();
         $bestId = $vacancies->groupBy('qualification_id')->sortByDesc(fn ($items) => $items->count())->keys()->first();
         return $qualifications->firstWhere('id', $bestId) ?? $qualifications->first();
+    }
+
+    private function levelRank(Qualification $qualification): int
+    {
+        return match (strtolower($qualification->title)) {
+            'intern' => 1,
+            'junior' => 2,
+            'middle' => 3,
+            'senior' => 4,
+            'lead', 'head' => 5,
+            default => 0,
+        };
     }
 
     private function opportunities($vacancies, array $skillIds): array
