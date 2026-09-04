@@ -11,7 +11,7 @@
                         <button type="submit" :disabled="processing" class="rounded-md bg-[#008060] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#006e52] disabled:opacity-60">{{ processing ? 'Готовим результат…' : 'Сохранить оценку' }}</button>
                     </form>
                 </div>
-                <div v-if="submittedData" class="mt-6 rounded-xl border border-[#b7d9c8] bg-[#f1f8f5] p-6"><p class="text-sm font-semibold text-[#006e52]">Оценка сохранена</p><h2 class="mt-2 text-xl font-semibold">{{ submittedData.subject }} — {{ submittedData.rating }}/10</h2><p class="mt-2 text-sm text-[#4a4f54]">{{ getRecommendations(submittedData.rating) }}</p><div class="mt-4 flex flex-wrap gap-2"><span v-for="skill in submittedData.skills.split(',')" :key="skill" class="rounded-full bg-white px-3 py-1 text-sm text-[#4a4f54] shadow-sm">{{ skill.trim() }}</span></div></div>
+                <div v-if="submittedData" class="mt-6 rounded-xl border border-[#b7d9c8] bg-[#f1f8f5] p-6"><p class="text-sm font-semibold text-[#006e52]">Оценка сохранена</p><h2 class="mt-2 text-xl font-semibold">{{ submittedData.subject }} - {{ submittedData.rating }}/10</h2><p class="mt-2 text-sm text-[#4a4f54]">{{ getRecommendations(submittedData.rating) }}</p><div class="mt-4 flex flex-wrap gap-2"><span v-for="skill in submittedData.skills.split(',')" :key="skill" class="rounded-full bg-white px-3 py-1 text-sm text-[#4a4f54] shadow-sm">{{ skill.trim() }}</span></div></div>
             </div>
         </div>
     </AppLayout>

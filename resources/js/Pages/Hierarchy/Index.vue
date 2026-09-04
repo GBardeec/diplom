@@ -89,7 +89,7 @@
                         </option>
                     </select>
                     <p class="mt-2 text-xs text-white/50">
-                        Схема показывает одну ветку за раз — так связи остаются читаемыми даже для большой базы должностей.
+                        Схема показывает одну ветку за раз - так связи остаются читаемыми даже для большой базы должностей.
                     </p>
                 </div>
 
@@ -170,7 +170,7 @@
                                     <div class="text-sm text-white mb-2">Диапазон</div>
                                     <div class="text-lg font-semibold text-white">
                                         {{ formatSalaryValue(selectedCategory.salary_stats.min_salary) }}
-                                        —
+                                        -
                                         {{ formatSalaryValue(selectedCategory.salary_stats.max_salary) }}
                                     </div>
                                 </div>

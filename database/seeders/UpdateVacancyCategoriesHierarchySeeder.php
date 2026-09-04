@@ -468,7 +468,7 @@ class UpdateVacancyCategoriesHierarchySeeder extends Seeder
             ],
 
             // ==========================================
-            // Остальные категории (без изменений — parent = null)
+            // Остальные категории (без изменений - parent = null)
             // ==========================================
             HabrCategory::DEVOPS->value => ['parent_id' => null, 'level' => 0, 'sort_order' => 1],
             HabrCategory::SYSTEM_ADMIN->value => ['parent_id' => null, 'level' => 0, 'sort_order' => 2],
