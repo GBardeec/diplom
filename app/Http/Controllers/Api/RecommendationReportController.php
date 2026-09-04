@@ -42,7 +42,7 @@ class RecommendationReportController extends Controller
             'commercial_experience' => ['required', 'in:none,up_to_year,one_to_three,three_plus'],
             'grade_answers' => ['required', 'array', 'size:5'],
             'grade_answers.*' => ['required', 'integer', 'between:0,3'],
-            'skills' => ['nullable', 'array', 'max:50'], 'skills.*' => ['integer', 'exists:skills,id'],
+            'skills' => ['required', 'array', 'min:1', 'max:50'], 'skills.*' => ['integer', 'exists:skills,id'],
             'group_id' => ['nullable', 'integer', 'exists:vacancy_groups,id'],
             'category_id' => ['nullable', 'integer', 'exists:vacancy_categories,id'],
             'qualification_id' => ['nullable', 'integer', 'exists:qualifications,id'],

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Qualification;
 use App\Models\Vacancy;
+use App\Models\VacancyCategory;
 use Illuminate\Database\Eloquent\Builder;
 
 class RecommendationService
@@ -18,9 +19,7 @@ class RecommendationService
             ->filter(fn ($item) => $this->levelRank($item) > $this->levelRank($current))
             ->sortBy(fn ($item) => $this->levelRank($item))
             ->first();
-        $nextVacancies = $next
-            ? $this->marketQuery($filters, [])->where('qualification_id', $next->id)->limit(500)->get()
-            : collect();
+        $nextVacancies = $next ? $this->nextLevelVacancies($filters, $next) : collect();
         $opportunities = $this->opportunities($vacancies, $skills);
         $gaps = $this->skillGaps($nextVacancies, $skills);
         $assessment = $this->assessment($filters, $current);
@@ -51,6 +50,24 @@ class RecommendationService
         elseif (!empty($filters['group_id'])) $query->whereHas('category', fn (Builder $q) => $q->where('group_id', $filters['group_id']));
         if ($skills) $query->whereHas('skills', fn (Builder $q) => $q->whereIn('skills.id', $skills));
         return $query;
+    }
+
+    private function nextLevelVacancies(array $filters, Qualification $next)
+    {
+        // Для следующего грейда берём рынок всего выбранного направления.
+        // Целевая роль может быть дальнейшей целью, где вакансий нужного грейда ещё нет.
+        $marketFilters = $filters;
+        $categoryId = $marketFilters['category_id'] ?? null;
+        $marketFilters['category_id'] = null;
+
+        if (empty($marketFilters['group_id']) && $categoryId) {
+            $marketFilters['group_id'] = VacancyCategory::query()->whereKey($categoryId)->value('group_id');
+        }
+
+        return $this->marketQuery($marketFilters, [])
+            ->where('qualification_id', $next->id)
+            ->limit(500)
+            ->get();
     }
 
     private function currentLevel(array $filters, $vacancies, $qualifications): Qualification
