@@ -29,7 +29,7 @@ import CareerPath from '@/Components/CareerPath.vue';
 const props = defineProps({ skills: Array, groups: Array, categories: Array, qualifications: Array, reportUuid: String });
 const step = ref(1), skillQuery = ref(''), result = ref(null), error = ref(''), formError = ref(''), loading = ref(false), copied = ref(false), uuid = ref(props.reportUuid || null);
 const form = ref({ commercial_experience: null, grade_answers: [null, null, null, null, null], skills: [], group_id: null, category_id: null });
-const readonlyReport = computed(() => Boolean(props.reportUuid));
+const readonlyReport = computed(() => Boolean(props.reportUuid || result.value?.report_uuid));
 const experienceOptions = [{ value: 'none', label: 'Нет, ищу первую работу или стажировку' }, { value: 'up_to_year', label: 'Да, до 1 года' }, { value: 'one_to_three', label: 'Да, от 1 до 3 лет' }, { value: 'three_plus', label: 'Да, более 3 лет' }];
 const gradeQuestions = [
   { title: 'Как вы обычно работаете над задачей?', options: [{ value: 0, text: 'Нужна подробная инструкция и регулярная проверка.' }, { value: 1, text: 'Сам выполняю типовые задачи, сложное согласовываю.' }, { value: 2, text: 'Сам выбираю подход и отвечаю за результат.' }, { value: 3, text: 'Определяю подход для команды и помогаю другим.' }] },
