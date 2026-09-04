@@ -42,7 +42,7 @@
                 <span class="diagram-node-port diagram-node-port-top"></span>
                 <svg class="diagram-node-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V7.5A1.5 1.5 0 0 1 5.5 6h13A1.5 1.5 0 0 1 20 7.5V20M2 20h20M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" /></svg>
                 <span class="diagram-node-title">{{ node.title }}</span>
-                <span class="diagram-node-meta">{{ node.vacancies_count || 0 }} вакансий найдено</span>
+                <span class="diagram-node-meta">{{ vacancyLabel(node.vacancies_count) }} найдено</span>
                 <span v-if="node.children.length" class="diagram-node-port diagram-node-port-bottom"></span>
             </button>
         </div>
@@ -58,6 +58,13 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['select', 'show-details']);
+const vacancyLabel = (value) => {
+    const count = Number(value) || 0;
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const word = mod10 === 1 && mod100 !== 11 ? 'вакансия' : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'вакансии' : 'вакансий');
+    return `${count} ${word}`;
+};
 const CARD_WIDTH = 142;
 const CARD_HEIGHT = 90;
 const SIBLING_GAP = 28;

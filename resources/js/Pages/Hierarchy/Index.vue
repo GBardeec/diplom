@@ -59,7 +59,7 @@
                             </h3>
                             <p class="text-sm text-white/60 mt-2 line-clamp-2">{{ category.description }}</p>
                             <div class="mt-3 flex items-center gap-2 text-xs text-white/40">
-                                <span>{{ category.vacancies_count || 0 }} вакансий найдено</span>
+                                <span>{{ vacancyLabel(category.vacancies_count) }} найдено</span>
                                 <span v-if="category.parent_id">↑ {{ getParentTitle(category.parent_id) }}</span>
                             </div>
                         </div>
@@ -228,7 +228,7 @@
                                 >
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="font-semibold text-white">{{ location.title }}</span>
-                                        <span class="text-sm text-white">{{ location.count }} вакансий ({{ location.percentage }}%)</span>
+                                        <span class="text-sm text-white">{{ vacancyLabel(location.count) }} ({{ location.percentage }}%)</span>
                                     </div>
                                     <div class="w-full bg-[#e1e3e5] rounded-full h-2 overflow-hidden">
                                         <div class="bg-[#008060] h-2 rounded-full transition-all duration-300" :style="{ width: location.percentage + '%' }"></div>
@@ -253,7 +253,7 @@
                                 >
                                     <div class="flex justify-between items-center mb-2">
                                         <span class="font-semibold text-white">{{ grade.title }}</span>
-                                        <span class="text-sm text-white">{{ grade.count }} вакансий ({{ grade.percentage }}%)</span>
+                                        <span class="text-sm text-white">{{ vacancyLabel(grade.count) }} ({{ grade.percentage }}%)</span>
                                     </div>
                                     <div class="w-full bg-[#e1e3e5] rounded-full h-2 overflow-hidden">
                                         <div class="bg-[#008060] h-2 rounded-full transition-all duration-300" :style="{ width: grade.percentage + '%' }"></div>
@@ -393,6 +393,13 @@ const parentMap = computed(() => new Map(props.categories.map(c => [c.id, c.titl
 
 const getGroupTitle = (groupId) => groupMap.value.get(groupId) || 'Неизвестно';
 const getParentTitle = (parentId) => parentMap.value.get(parentId) || null;
+const vacancyLabel = (value) => {
+    const count = Number(value) || 0;
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const word = mod10 === 1 && mod100 !== 11 ? 'вакансия' : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'вакансии' : 'вакансий');
+    return `${count} ${word}`;
+};
 const getFilteredCategoriesByLevel = (level) => filteredCategories.value.filter(c => c.level === level).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
 
 const getLevelLabel = (level) => {

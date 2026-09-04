@@ -15,7 +15,7 @@
                         <span class="font-semibold text-white">{{ node.title }}</span>
                     </div>
                     <div class="text-xs text-white/60 mt-1">
-                        <span class="mr-3">📊 {{ node.vacancies_count || 0 }} вакансий найдено</span>
+                        <span class="mr-3">📊 {{ vacancyLabel(node.vacancies_count) }} найдено</span>
                         <span v-if="node.salary_stats?.avg_salary" class="mr-3">
                             💰 {{ formatSalaryValue(node.salary_stats.avg_salary) }}
                         </span>
@@ -58,6 +58,13 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['select', 'show-details']);
+const vacancyLabel = (value) => {
+    const count = Number(value) || 0;
+    const mod10 = count % 10;
+    const mod100 = count % 100;
+    const word = mod10 === 1 && mod100 !== 11 ? 'вакансия' : (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14) ? 'вакансии' : 'вакансий');
+    return `${count} ${word}`;
+};
 
 const isExpanded = ref(true);
 const hasChildren = computed(() => props.node.children && props.node.children.length > 0);
