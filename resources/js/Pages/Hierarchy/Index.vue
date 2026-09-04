@@ -59,7 +59,7 @@
                             </h3>
                             <p class="text-sm text-white/60 mt-2 line-clamp-2">{{ category.description }}</p>
                             <div class="mt-3 flex items-center gap-2 text-xs text-white/40">
-                                <span>{{ category.vacancies_count || 0 }} вакансий</span>
+                                <span>{{ category.vacancies_count || 0 }} вакансий найдено</span>
                                 <span v-if="category.parent_id">↑ {{ getParentTitle(category.parent_id) }}</span>
                             </div>
                         </div>

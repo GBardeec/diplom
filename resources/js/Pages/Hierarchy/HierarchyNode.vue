@@ -15,7 +15,7 @@
                         <span class="font-semibold text-white">{{ node.title }}</span>
                     </div>
                     <div class="text-xs text-white/60 mt-1">
-                        <span class="mr-3">📊 {{ node.vacancies_count || 0 }} вакансий</span>
+                        <span class="mr-3">📊 {{ node.vacancies_count || 0 }} вакансий найдено</span>
                         <span v-if="node.salary_stats?.avg_salary" class="mr-3">
                             💰 {{ formatSalaryValue(node.salary_stats.avg_salary) }}
                         </span>

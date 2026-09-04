@@ -38,10 +38,7 @@ class RecommendationService
             'assessment' => $assessment,
             'portfolio_evidence' => $this->portfolioEvidence($current, $next, $gaps),
             'roadmap' => $this->roadmap($current, $next, $gaps),
-            'meta' => [
-                'analyzed_total' => $vacancies->count(),
-                'message' => 'Профиль составлен по вашим навыкам и данным вакансий.',
-            ],
+            'meta' => ['total' => $vacancies->count(), 'message' => $skills ? 'Профиль составлен по вашим навыкам и данным вакансий.' : 'Добавьте навыки, чтобы сделать профиль точнее.'],
         ];
     }
 
