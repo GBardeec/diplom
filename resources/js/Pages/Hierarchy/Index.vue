@@ -6,7 +6,7 @@
             <!-- Заголовок -->
             <div class="mb-8 max-w-xl">
                 <p class="mb-2 text-sm font-semibold text-[#008060]">Карта карьерных ролей</p>
-                <h1 class="text-3xl font-semibold tracking-tight text-[#202223] sm:text-4xl">
+                <h1 class="text-3xl font-semibold tracking-tight text-[#202223]">
                     Иерархическая структура должностей
                 </h1>
                 <p class="mt-3 text-[#616161]">
