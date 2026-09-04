@@ -8,8 +8,6 @@
             <h1 class="mt-3 max-w-[17ch] text-4xl font-bold leading-[1.06] tracking-[-.035em] text-[#15191b] sm:text-5xl">Ваш уровень, следующая роль и понятный план развития</h1>
             <p class="mt-4 max-w-xl text-lg leading-7 text-[#545c60]">Ответьте на вопросы о реальном опыте, добавьте навыки и получите персональный ориентир: что уже подтверждает ваш уровень и куда двигаться дальше.</p>
             <div class="mt-6 flex flex-wrap items-center gap-4"><Link :href="route('recommendations.index')" class="rounded-[10px] bg-[#2e6b4f] px-6 py-4 text-sm font-semibold text-white transition hover:bg-[#22523c]">Пройти оценку</Link><Link :href="route('hierarchy.structure')" class="rounded-[10px] border border-[#c9cccf] bg-white px-6 py-4 text-sm font-semibold text-[#202223] transition hover:bg-[#f6f7f6]">Сначала посмотреть карту ролей</Link></div>
-            <p class="mt-4 text-sm text-[#8b9296]">5 вопросов об опыте, затем навыки и карьерная цель. Без регистрации.</p>
-            <div class="mt-7 flex flex-wrap gap-x-10 gap-y-5 border-t border-[#eef0ee] pt-5"><div v-for="fact in facts" :key="fact.value" class="max-w-[15rem]"><b class="block text-2xl tracking-[-.02em] text-[#15191b]">{{ fact.value }}</b><span class="mt-1 block text-sm leading-5 text-[#8b9296]">{{ fact.label }}</span></div></div>
           </div>
 
           <div class="self-center">
@@ -31,12 +29,6 @@
 <script setup>
 import { Link } from '@inertiajs/vue3';
 import AppLayout from '@/Layouts/AppLayout.vue';
-
-const facts = [
-  { value: '3 шага', label: 'опыт, навыки и карьерная цель' },
-  { value: '5 грейдов', label: 'от Intern до Lead' },
-  { value: '1 отчёт', label: 'с понятным планом развития' },
-];
 
 const steps = [
   { number: '1', title: 'Оцените рабочий уровень', text: 'Ответьте на вопросы о задачах, ответственности и самостоятельности.' },
