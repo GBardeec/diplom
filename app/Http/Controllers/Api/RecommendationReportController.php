@@ -39,6 +39,9 @@ class RecommendationReportController extends Controller
     private function validated(Request $request): array
     {
         return $request->validate([
+            'commercial_experience' => ['required', 'in:none,up_to_year,one_to_three,three_plus'],
+            'grade_answers' => ['required', 'array', 'size:5'],
+            'grade_answers.*' => ['required', 'integer', 'between:0,3'],
             'skills' => ['nullable', 'array', 'max:50'], 'skills.*' => ['integer', 'exists:skills,id'],
             'group_id' => ['nullable', 'integer', 'exists:vacancy_groups,id'],
             'category_id' => ['nullable', 'integer', 'exists:vacancy_categories,id'],

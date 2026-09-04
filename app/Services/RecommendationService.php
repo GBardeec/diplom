@@ -21,7 +21,7 @@ class RecommendationService
         return [
             'profile' => [
                 'current_level' => $current->title,
-                'basis' => !empty($filters['qualification_id']) ? 'Ваша самооценка' : ($skills ? 'Оценка по совпадению навыков с рынком' : 'Добавьте навыки для точной оценки'),
+                'basis' => 'Оценка по опыту и уровню самостоятельности',
                 'skills_count' => count($skills),
             ],
             'opportunities' => $opportunities,
@@ -50,6 +50,22 @@ class RecommendationService
 
     private function currentLevel(array $filters, $vacancies, $qualifications): Qualification
     {
+        if (($filters['commercial_experience'] ?? null) === 'none') {
+            return $qualifications->first(fn ($item) => strcasecmp($item->title, 'Intern') === 0) ?? $qualifications->first();
+        }
+
+        if (!empty($filters['grade_answers'])) {
+            $average = array_sum($filters['grade_answers']) / count($filters['grade_answers']);
+            $title = match (true) {
+                $average < 0.8 => 'Junior',
+                $average < 1.8 => 'Middle',
+                $average < 2.7 => 'Senior',
+                default => 'Lead',
+            };
+
+            return $qualifications->first(fn ($item) => strcasecmp($item->title, $title) === 0) ?? $qualifications->first();
+        }
+
         if (!empty($filters['qualification_id']) && ($chosen = $qualifications->firstWhere('id', $filters['qualification_id']))) return $chosen;
         if (empty($filters['skills'])) return $qualifications->first();
         $bestId = $vacancies->groupBy('qualification_id')->sortByDesc(fn ($items) => $items->count())->keys()->first();
