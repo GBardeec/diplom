@@ -287,7 +287,7 @@ class RecommendationService
             ->groupBy(fn (Vacancy $vacancy) => $vacancy->category->group_id)
             ->map(function ($groupVacancies) use ($skillIds, $selectedSkills, $filters, $next, $relevantQualificationIds) {
                 $relevantVacancies = $groupVacancies->whereIn('qualification_id', $relevantQualificationIds);
-                if ($relevantVacancies->count() < 10) {
+                if ($relevantVacancies->count() < 3) {
                     return null;
                 }
 
