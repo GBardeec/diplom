@@ -1,6 +1,6 @@
 <template>
   <AppLayout>
-    <main class="mx-auto w-full max-w-6xl flex-1 px-4 py-10">
+    <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
       <p class="text-sm font-semibold text-[#008060]">Карьерный навигатор</p>
       <h1 class="mt-2 text-3xl font-semibold">Поймите, где вы сейчас и куда расти дальше</h1>
       <p class="mt-3 max-w-3xl text-[#616161]">Сначала оценим рабочий уровень, затем учтём навыки и выбранное направление. Это займёт несколько минут.</p>
