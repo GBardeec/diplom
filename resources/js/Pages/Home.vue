@@ -16,7 +16,7 @@
             <p class="mb-3 text-sm text-[#8b9296]">Пример готового отчёта</p>
             <article class="overflow-hidden rounded-[14px] border border-[#e3e6e4] bg-white shadow-[0_14px_34px_-22px_rgba(21,25,27,.28)]">
               <div class="flex items-center gap-2 border-b border-[#eef0ee] bg-[#fbfcfb] px-5 py-3"><span v-for="dot in 3" :key="dot" class="h-2 w-2 rounded-full bg-[#dfe3e0]"></span><span class="ml-1 text-xs text-[#8b9296]">Карьерный план</span></div>
-              <div class="p-6 sm:p-7"><p class="text-sm text-[#8b9296]">Текущий уровень</p><p class="mt-1 text-2xl font-bold tracking-[-.02em]">Middle Backend</p><p class="mt-2 text-sm text-[#545c60]">Подтверждён опытом и ответами о самостоятельности.</p><div class="mt-3 flex gap-1"><i v-for="item in 5" :key="item" class="h-1.5 flex-1 rounded bg-[#2e6b4f]"></i></div><div class="my-6 h-px bg-[#eef0ee]"></div><div class="flex items-end justify-between gap-4"><div><p class="text-sm text-[#8b9296]">Следующая ступень</p><h2 class="mt-1 text-xl font-bold tracking-[-.02em]">Senior Backend</h2></div><span class="text-xs text-[#545c60]">реалистичный ориентир</span></div><div class="mt-5 divide-y divide-[#eef0ee]"><div v-for="skill in previewSkills" :key="skill.title" class="flex items-center justify-between gap-4 py-3 text-sm"><span>{{ skill.title }}</span><span :class="skill.className" class="rounded-md px-2.5 py-1 text-xs font-semibold">{{ skill.label }}</span></div></div></div>
+              <div class="space-y-4 p-6 sm:p-7"><div class="grid gap-3 sm:grid-cols-3"><div class="rounded-lg border border-[#e3e6e4] p-3"><p class="text-xs text-[#8b9296]">Текущий уровень</p><b class="mt-1 block text-lg tracking-[-.02em]">Middle</b></div><div class="rounded-lg border border-[#e3e6e4] p-3"><p class="text-xs text-[#8b9296]">Следующий уровень</p><b class="mt-1 block text-lg tracking-[-.02em]">Senior</b></div><div class="rounded-lg border border-[#e3e6e4] p-3"><p class="text-xs text-[#8b9296]">Навыков в профиле</p><b class="mt-1 block text-lg tracking-[-.02em]">4</b></div></div><section class="rounded-lg border border-[#b7d9c8] bg-[#f1f8f5] p-4"><p class="text-sm font-semibold">Почему этот уровень</p><p class="mt-1 text-sm leading-5 text-[#545c60]">Самостоятельно ведёте задачи и умеете оценивать варианты и риски.</p></section><section class="rounded-lg border border-[#e3e6e4] p-4"><div class="flex items-center justify-between gap-3"><p class="text-sm font-semibold">Что подтянуть для Senior</p><span class="rounded-md bg-[#fbeee9] px-2 py-1 text-xs font-semibold text-[#a63d2b]">38% вакансий</span></div><p class="mt-2 text-sm text-[#545c60]">Docker и контейнеризация</p></section></div>
               <p class="border-t border-[#eef0ee] bg-[#fbfcfb] px-7 py-4 text-sm text-[#545c60]">Дальше - конкретные шаги и примеры того, что подтвердит ваш уровень.</p>
             </article>
           </div>
@@ -36,12 +36,6 @@ const facts = [
   { value: '3 шага', label: 'опыт, навыки и карьерная цель' },
   { value: '5 грейдов', label: 'от Intern до Lead' },
   { value: '1 отчёт', label: 'с понятным планом развития' },
-];
-
-const previewSkills = [
-  { title: 'Архитектурные решения', label: 'развить', className: 'bg-[#fbeee9] text-[#a63d2b]' },
-  { title: 'Код-ревью и наставничество', label: 'усилить', className: 'bg-[#faf3e1] text-[#87681a]' },
-  { title: 'Работа с API', label: 'уже есть', className: 'bg-[#eaf2ed] text-[#22523c]' },
 ];
 
 const steps = [
