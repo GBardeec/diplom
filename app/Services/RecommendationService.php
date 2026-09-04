@@ -23,7 +23,8 @@ class RecommendationService
         $nextVacancies = $next ? $this->nextLevelVacancies($filters, $next) : collect();
         $opportunities = $this->opportunities($vacancies, $skills);
         $gaps = $this->skillGaps($nextVacancies, $skills);
-        $directions = $this->directions($filters, $skills, $next);
+        $directions = $this->directions($filters, $skills, $current, $next);
+        $primaryDirection = $directions[0] ?? null;
         $assessment = $this->assessment($filters, $current);
 
         return [
@@ -40,9 +41,8 @@ class RecommendationService
             ],
             'assessment' => $assessment,
             'portfolio_evidence' => $this->portfolioEvidence($current, $next, $gaps),
-            // Конкретные дефициты показаны внутри каждого направления. В общем
-            // плане не смешиваем стек разработки, аналитики и администрирования.
-            'roadmap' => $this->roadmap($current, $next, []),
+            'roadmap' => $this->roadmap($current, $next, $primaryDirection['skills_to_build'] ?? []),
+            'roadmap_direction' => $primaryDirection['group'] ?? null,
             'meta' => ['total' => $vacancies->count(), 'message' => $skills ? 'Профиль составлен по вашим навыкам и данным вакансий.' : 'Добавьте навыки, чтобы сделать профиль точнее.'],
         ];
     }
@@ -267,7 +267,7 @@ class RecommendationService
             ->all();
     }
 
-    private function directions(array $filters, array $skillIds, ?Qualification $next): array
+    private function directions(array $filters, array $skillIds, Qualification $current, ?Qualification $next): array
     {
         $marketFilters = $filters;
         $categoryId = $marketFilters['category_id'] ?? null;
@@ -280,13 +280,20 @@ class RecommendationService
         $vacancies = $this->marketQuery($marketFilters, [])->limit(500)->get();
         $selectedSkills = Skill::query()->whereKey($skillIds)->get(['id', 'title'])->keyBy('id');
 
+        $relevantQualificationIds = collect([$current->id, $next?->id])->filter()->all();
+
         return $vacancies
             ->filter(fn (Vacancy $vacancy) => $vacancy->category?->group)
             ->groupBy(fn (Vacancy $vacancy) => $vacancy->category->group_id)
-            ->map(function ($groupVacancies) use ($skillIds, $selectedSkills, $filters, $next) {
-                $group = $groupVacancies->first()->category->group;
-                $total = $groupVacancies->count();
-                $skillsInVacancies = $groupVacancies->flatMap->skills->groupBy('id');
+            ->map(function ($groupVacancies) use ($skillIds, $selectedSkills, $filters, $next, $relevantQualificationIds) {
+                $relevantVacancies = $groupVacancies->whereIn('qualification_id', $relevantQualificationIds);
+                if ($relevantVacancies->count() < 10) {
+                    return null;
+                }
+
+                $group = $relevantVacancies->first()->category->group;
+                $total = $relevantVacancies->count();
+                $skillsInVacancies = $relevantVacancies->flatMap->skills->groupBy('id');
 
                 $matchedSkills = $selectedSkills
                     ->map(function (Skill $skill) use ($skillsInVacancies, $total) {
@@ -298,10 +305,17 @@ class RecommendationService
                             'vacancies_count' => $count,
                         ];
                     })
+                    ->filter(fn (array $skill) => $skill['vacancies_count'] > 0)
                     ->sortByDesc('percent')
                     ->values();
 
-                $roles = $groupVacancies
+                $missingSkills = $selectedSkills
+                    ->filter(fn (Skill $skill) => ! $skillsInVacancies->has($skill->id))
+                    ->pluck('title')
+                    ->values()
+                    ->all();
+
+                $roles = $relevantVacancies
                     ->groupBy('vacancy_category_id')
                     ->map(function ($categoryVacancies) use ($skillIds) {
                         $sample = $categoryVacancies->first();
@@ -311,12 +325,13 @@ class RecommendationService
                         return [
                             'category_id' => $sample->category->id,
                             'title' => $sample->category->title,
-                            'fit' => $skillIds ? (int) round($matched / count($skillIds) * 100) : 0,
+                            'matched_skills_count' => $matched,
+                            'selected_skills_count' => count($skillIds),
                             'vacancies_count' => $categoryVacancies->count(),
                         ];
                     })
-                    ->filter(fn (array $role) => $role['fit'] > 0)
-                    ->sortByDesc('fit')
+                    ->filter(fn (array $role) => $role['matched_skills_count'] > 0)
+                    ->sortByDesc('matched_skills_count')
                     ->take(3)
                     ->values()
                     ->all();
@@ -333,12 +348,15 @@ class RecommendationService
                     'group_id' => $group->id,
                     'group' => $group->title,
                     'matched_skills' => $matchedSkills->all(),
+                    'missing_skills' => $missingSkills,
                     'roles' => $roles,
                     'skills_to_build' => $this->skillGaps($nextVacancies, $skillIds),
-                    'score' => $matchedSkills->sum('percent'),
+                    'sample_size' => $total,
+                    'matched_skills_count' => $matchedSkills->count(),
+                    'score' => $matchedSkills->count() * 1000 + $total,
                 ];
             })
-            ->filter(fn (array $direction) => count($direction['roles']) > 0)
+            ->filter(fn (?array $direction) => $direction && count($direction['roles']) > 0)
             ->sortByDesc('score')
             ->take(3)
             ->map(function (array $direction) {
