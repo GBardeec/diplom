@@ -215,13 +215,14 @@
                             <h3 class="mb-1 text-lg font-semibold text-[#202223]">
                                 Ключевые навыки
                             </h3>
-                            <p class="text-sm text-[#616161]">Топ-10 навыков по доле вакансий выбранной роли.</p>
+                            <p class="text-sm text-[#616161]">Навыки по доле вакансий выбранной роли.</p>
                             <div class="mt-4 space-y-3">
-                                <div v-for="skill in selectedCategory.top_skills" :key="skill.skill_id">
+                                <div v-for="skill in visibleTopSkills" :key="skill.skill_id">
                                     <div class="mb-1 flex items-center justify-between gap-3 text-sm"><span class="font-medium text-[#202223]">{{ skill.title }}</span><span class="text-[#4a4f54]">{{ skill.percentage }}% - {{ vacancyLabel(skill.count) }}</span></div>
                                     <div class="h-2 overflow-hidden rounded-full bg-[#e1e3e5]"><div class="h-2 rounded-full bg-[#008060]" :style="{ width: `${skill.percentage}%` }"></div></div>
                                 </div>
                             </div>
+                            <button v-if="allTopSkills.length > 8" type="button" class="mt-4 text-sm font-semibold text-[#008060] hover:text-[#006e52]" @click="isSkillsExpanded = !isSkillsExpanded">{{ isSkillsExpanded ? 'Свернуть список' : `Показать все навыки (${allTopSkills.length})` }}</button>
                         </div>
 
                         <!-- Локации -->
@@ -235,7 +236,7 @@
                             <p class="text-sm text-[#616161]">Распределение вакансий по городам.</p>
                             <div class="space-y-3">
                                 <div
-                                    v-for="location in selectedCategory.top_locations"
+                                    v-for="location in visibleTopLocations"
                                     :key="location.location_id"
                                     class="rounded-lg border border-[#e1e3e5] bg-white p-3"
                                 >
@@ -248,6 +249,7 @@
                                     </div>
                                 </div>
                             </div>
+                            <button v-if="allTopLocations.length > 8" type="button" class="mt-4 text-sm font-semibold text-[#008060] hover:text-[#006e52]" @click="isLocationsExpanded = !isLocationsExpanded">{{ isLocationsExpanded ? 'Свернуть список' : `Показать все города (${allTopLocations.length})` }}</button>
                         </div>
 
                         <!-- Грейды -->
@@ -325,6 +327,8 @@ const props = defineProps({
 
 const selectedCategory = ref(null);
 const isCategoryModalOpen = ref(false);
+const isSkillsExpanded = ref(false);
+const isLocationsExpanded = ref(false);
 const selectedGroupId = ref(null);
 const viewMode = ref('table');
 const selectedTreeNode = ref(null);
@@ -333,6 +337,10 @@ let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
 const maxPublicationCount = computed(() => Math.max(1, ...publicationTimeline.value.map(point => point.count)));
+const allTopSkills = computed(() => selectedCategory.value?.top_skills || []);
+const visibleTopSkills = computed(() => isSkillsExpanded.value ? allTopSkills.value : allTopSkills.value.slice(0, 8));
+const allTopLocations = computed(() => selectedCategory.value?.top_locations || []);
+const visibleTopLocations = computed(() => isLocationsExpanded.value ? allTopLocations.value : allTopLocations.value.slice(0, 8));
 const gradeSalaries = computed(() => Object.values(selectedCategory.value?.salary_stats?.by_grade || {}));
 const maxGradeSalary = computed(() => Math.max(1, ...gradeSalaries.value.map(item => item.avg || 0)));
 
@@ -467,6 +475,8 @@ const showCategoryDetails = (category) => {
         clearTimeout(modalCloseTimer);
         modalCloseTimer = null;
     }
+    isSkillsExpanded.value = false;
+    isLocationsExpanded.value = false;
     selectedCategory.value = category;
     isCategoryModalOpen.value = true;
 };
