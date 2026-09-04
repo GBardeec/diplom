@@ -23,9 +23,9 @@
 </template>
 
 <script setup>
-import { computed, defineComponent, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import CareerPath from '@/Components/CareerPath.vue';
+import ReportContent from '@/Components/RecommendationReport.vue';
 const props = defineProps({ skills: Array, groups: Array, categories: Array, qualifications: Array, reportUuid: String });
 const step = ref(1), skillQuery = ref(''), result = ref(null), error = ref(''), formError = ref(''), loading = ref(false), copied = ref(false), uuid = ref(props.reportUuid || null);
 const form = ref({ commercial_experience: null, grade_answers: [null, null, null, null, null], skills: [], group_id: null, category_id: null });
@@ -51,7 +51,6 @@ const submit = async () => { loading.value = true; error.value = ''; try { const
 const copyLink = async () => { await navigator.clipboard.writeText(result.value.report_url); copied.value = true; setTimeout(() => copied.value = false, 1500); };
 const careerPath = computed(() => { let node = new Map(props.categories.map(item => [item.id, item])).get(result.value?.opportunities?.[0]?.category_id), path = []; while (node) { path.unshift(node); node = props.categories.find(item => item.id === node.parent_id); } return path; });
 onMounted(async () => { if (!uuid.value) return; try { const data = await request(`/api/recommendations/${uuid.value}`); result.value = data.data; } catch (exception) { error.value = exception.message; } });
-const ReportContent = defineComponent({ components: { CareerPath }, props: { result: Object, error: String, careerPath: Array, copied: Boolean }, emits: ['copy'], template: `<p v-if="error" class="rounded border border-red-200 bg-red-50 p-4 text-red-800">{{ error }}</p><p v-else-if="!result" class="rounded-xl border border-dashed border-[#c9cccf] bg-white p-10 text-center text-[#6d7175]">Загружаем сохранённый отчёт…</p><template v-else><div class="notice"><p>После закрытия вкладки введённые данные не сохраняются в браузере. Сохраните ссылку на готовый отчёт, если захотите вернуться к нему позже.</p><div class="mt-3 flex gap-2"><input readonly :value="result.report_url" class="field min-w-0 flex-1"/><button type="button" class="copy" @click="$emit('copy')">{{ copied ? 'Скопировано' : 'Копировать ссылку' }}</button></div></div><div class="mt-5 grid gap-4 sm:grid-cols-3"><article class="card"><p>Текущий уровень</p><b>{{ result.profile.current_level }}</b><small>{{ result.profile.basis }}</small></article><article class="card"><p>Навыков в профиле</p><b>{{ result.profile.skills_count }}</b><small>Чем точнее набор, тем точнее маршрут.</small></article><article class="card"><p>Следующий уровень</p><b>{{ result.growth.next_level || 'Верхний уровень' }}</b><small>Ориентир для развития.</small></article></div><article v-if="careerPath.length" class="panel"><h2>Ваш возможный путь</h2><CareerPath :nodes="careerPath" /></article><article class="panel"><h2>Что уже доступно</h2><div class="mt-4 grid gap-3 sm:grid-cols-3"><div v-for="item in result.opportunities" :key="item.title" class="inner"><b>{{ item.title }}</b><p>{{ item.group }}</p><strong>{{ item.fit }}% соответствие профилю</strong></div></div></article><article class="panel"><h2>Что подтянуть</h2><div class="mt-3 flex flex-wrap gap-2"><span v-for="item in result.growth.skills_to_build" :key="item" class="tag">{{ item }}</span></div></article><article class="panel"><h2>План следующего шага</h2><ol class="mt-4 space-y-3"><li v-for="(item, index) in result.roadmap" :key="item.title"><b>{{ index + 1 }}. {{ item.title }}</b><p>{{ item.text }}</p></li></ol></article></template>` });
 </script>
 
 <style scoped>
