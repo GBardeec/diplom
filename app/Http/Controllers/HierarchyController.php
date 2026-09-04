@@ -145,6 +145,7 @@ class HierarchyController extends Controller
             ->select('skills.id as skill_id', 'skills.title', DB::raw('COUNT(*) as count'))
             ->groupBy('skills.id', 'skills.title')
             ->orderBy('count', 'desc')
+            ->limit(10)
             ->get()
             ->map(function ($skill) use ($vacancyIds) {
                 $skill->percentage = round(($skill->count / $vacancyIds->count()) * 100);

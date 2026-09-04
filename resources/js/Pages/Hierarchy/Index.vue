@@ -177,39 +177,31 @@
                             v-if="selectedCategory?.salary_stats && selectedCategory.salary_stats.avg_salary > 0"
                             class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
                         >
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <h3 class="mb-4 text-lg font-semibold text-[#202223]">
                                 Зарплатная вилка
                             </h3>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                                <div class="bg-white/10 rounded-lg p-4 text-center border border-white/10">
-                                    <div class="text-sm text-white mb-2">Средняя зарплата</div>
-                                    <div class="text-2xl font-bold text-white">
+                                <div class="rounded-lg border border-[#e1e3e5] bg-white p-4 text-center">
+                                    <div class="mb-2 text-sm text-[#616161]">Средняя зарплата</div>
+                                    <div class="text-2xl font-bold text-[#202223]">
                                         {{ formatSalaryValue(selectedCategory.salary_stats.avg_salary) }}
                                     </div>
                                 </div>
-                                <div class="bg-white/10 rounded-lg p-4 text-center border border-white/10">
-                                    <div class="text-sm text-white mb-2">Диапазон</div>
-                                    <div class="text-lg font-semibold text-white">
+                                <div class="rounded-lg border border-[#e1e3e5] bg-white p-4 text-center">
+                                    <div class="mb-2 text-sm text-[#616161]">Диапазон</div>
+                                    <div class="text-lg font-semibold text-[#202223]">
                                         {{ formatSalaryValue(selectedCategory.salary_stats.min_salary) }}
                                         -
                                         {{ formatSalaryValue(selectedCategory.salary_stats.max_salary) }}
                                     </div>
                                 </div>
                             </div>
-                            <div
-                                v-if="Object.keys(selectedCategory.salary_stats.by_grade || {}).length"
-                                class="pt-4 border-t border-white/10"
-                            >
-                                <div class="text-sm text-white mb-3">По грейдам:</div>
-                                <div class="flex flex-wrap gap-2">
-                                    <div
-                                        v-for="(salary, grade) in selectedCategory.salary_stats.by_grade"
-                                        :key="grade"
-                                        class="bg-white/10 rounded-lg px-3 py-2 border border-white/10"
-                                    >
-                                        <span class="font-semibold text-white">{{ grade }}</span>
-                                        <span class="text-white ml-2">{{ formatSalaryValue(salary.avg) }}</span>
-                                        <span class="text-white/70 text-xs ml-1">({{ salary.count }})</span>
+                            <div v-if="Object.keys(selectedCategory.salary_stats.by_grade || {}).length" class="pt-4 border-t border-[#e1e3e5]">
+                                <div class="mb-3 text-sm font-semibold text-[#4a4f54]">Средняя зарплата по грейдам</div>
+                                <div class="space-y-3">
+                                    <div v-for="(salary, grade) in selectedCategory.salary_stats.by_grade" :key="grade">
+                                        <div class="mb-1 flex items-center justify-between gap-3 text-sm"><span class="font-medium text-[#202223]">{{ grade }}</span><span class="text-[#4a4f54]">{{ formatSalaryValue(salary.avg) }}</span></div>
+                                        <div class="h-2 overflow-hidden rounded-full bg-[#e1e3e5]"><div class="h-2 rounded-full bg-[#008060]" :style="{ width: `${Math.max(6, Math.round(salary.avg / maxGradeSalary * 100))}%` }"></div></div>
                                     </div>
                                 </div>
                             </div>
@@ -220,15 +212,14 @@
                             v-if="selectedCategory?.top_skills && selectedCategory.top_skills.length"
                             class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
                         >
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <h3 class="mb-1 text-lg font-semibold text-[#202223]">
                                 Ключевые навыки
                             </h3>
-                            <div class="flex flex-wrap gap-2">
+                            <p class="text-sm text-[#616161]">Топ-10 навыков по доле вакансий выбранной роли.</p>
+                            <div class="mt-4 space-y-3">
                                 <div v-for="skill in selectedCategory.top_skills" :key="skill.skill_id">
-                                    <div class="px-3 py-2 bg-white/10 rounded-lg text-white text-sm transition border border-white/10">
-                                        {{ skill.title }}
-                                        <span class="ml-1 text-white/70 text-xs">({{ skill.count }})</span>
-                                    </div>
+                                    <div class="mb-1 flex items-center justify-between gap-3 text-sm"><span class="font-medium text-[#202223]">{{ skill.title }}</span><span class="text-[#4a4f54]">{{ skill.percentage }}% - {{ vacancyLabel(skill.count) }}</span></div>
+                                    <div class="h-2 overflow-hidden rounded-full bg-[#e1e3e5]"><div class="h-2 rounded-full bg-[#008060]" :style="{ width: `${skill.percentage}%` }"></div></div>
                                 </div>
                             </div>
                         </div>
@@ -238,18 +229,19 @@
                             v-if="selectedCategory?.top_locations && selectedCategory.top_locations.length"
                             class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
                         >
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <h3 class="mb-1 text-lg font-semibold text-[#202223]">
                                 География вакансий
                             </h3>
+                            <p class="text-sm text-[#616161]">Распределение вакансий по городам.</p>
                             <div class="space-y-3">
                                 <div
                                     v-for="location in selectedCategory.top_locations"
                                     :key="location.location_id"
-                                    class="bg-white/5 rounded-lg p-3 border border-white/10"
+                                    class="rounded-lg border border-[#e1e3e5] bg-white p-3"
                                 >
                                     <div class="flex justify-between items-center mb-2">
-                                        <span class="font-semibold text-white">{{ location.title }}</span>
-                                        <span class="text-sm text-white">{{ vacancyLabel(location.count) }} ({{ location.percentage }}%)</span>
+                                        <span class="font-semibold text-[#202223]">{{ location.title }}</span>
+                                        <span class="text-sm text-[#4a4f54]">{{ vacancyLabel(location.count) }} ({{ location.percentage }}%)</span>
                                     </div>
                                     <div class="w-full bg-[#e1e3e5] rounded-full h-2 overflow-hidden">
                                         <div class="bg-[#008060] h-2 rounded-full transition-all duration-300" :style="{ width: location.percentage + '%' }"></div>
@@ -288,18 +280,20 @@
                             v-if="selectedCategory?.employment_stats && Object.keys(selectedCategory.employment_stats).length"
                             class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
                         >
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <h3 class="mb-1 text-lg font-semibold text-[#202223]">
                                 Формат работы
                             </h3>
+                            <p class="text-sm text-[#616161]">Как распределяются форматы работы в вакансиях.</p>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div
                                     v-for="(count, type) in selectedCategory.employment_stats"
                                     :key="type"
                                     class="rounded-lg border border-[#e1e3e5] bg-white p-3 text-center transition hover:border-[#8c9196]"
                                 >
-                                    <div class="text-2xl mb-2">{{ getEmploymentIcon(type) }}</div>
-                                    <div class="font-semibold text-white text-sm">{{ getEmploymentType(type) }}</div>
-                                    <div class="text-lg font-bold text-white mt-1">{{ count }}</div>
+                                    <div class="font-semibold text-[#202223] text-sm">{{ getEmploymentType(type) }}</div>
+                                    <div class="mt-1 text-lg font-bold text-[#202223]">{{ count }}</div>
+                                    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e1e3e5]"><div class="h-1.5 rounded-full bg-[#008060]" :style="{ width: `${employmentPercent(count)}%` }"></div></div>
+                                    <div class="mt-1 text-xs text-[#6d7175]">{{ employmentPercent(count) }}%</div>
                                 </div>
                             </div>
                         </div>
@@ -339,6 +333,8 @@ let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
 const maxPublicationCount = computed(() => Math.max(1, ...publicationTimeline.value.map(point => point.count)));
+const gradeSalaries = computed(() => Object.values(selectedCategory.value?.salary_stats?.by_grade || {}));
+const maxGradeSalary = computed(() => Math.max(1, ...gradeSalaries.value.map(item => item.avg || 0)));
 
 // Фильтрация категорий - исключаем "Другое" (sort_order === 99)
 const mainCategories = computed(() => {
@@ -460,6 +456,11 @@ const getEmploymentType = (type) => {
 };
 
 const getEmploymentIcon = () => '';
+
+const employmentPercent = (count) => {
+    const total = Number(selectedCategory.value?.vacancies_count) || 0;
+    return total ? Math.round(Number(count) / total * 100) : 0;
+};
 
 const showCategoryDetails = (category) => {
     if (modalCloseTimer) {
