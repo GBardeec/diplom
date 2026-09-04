@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Qualification;
+use App\Models\Skill;
 use App\Models\Vacancy;
 use App\Models\VacancyCategory;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,6 +23,7 @@ class RecommendationService
         $nextVacancies = $next ? $this->nextLevelVacancies($filters, $next) : collect();
         $opportunities = $this->opportunities($vacancies, $skills);
         $gaps = $this->skillGaps($nextVacancies, $skills);
+        $directions = $this->directions($filters, $skills, $next);
         $assessment = $this->assessment($filters, $current);
 
         return [
@@ -31,6 +33,7 @@ class RecommendationService
                 'skills_count' => count($skills),
             ],
             'opportunities' => $opportunities,
+            'directions' => $directions,
             'growth' => [
                 'next_level' => $next?->title,
                 'skills_to_build' => $gaps,
@@ -258,6 +261,88 @@ class RecommendationService
                 'percent' => (int) round($items->count() / $total * 100),
                 'vacancies_count' => $items->count(),
             ])
+            ->values()
+            ->all();
+    }
+
+    private function directions(array $filters, array $skillIds, ?Qualification $next): array
+    {
+        $marketFilters = $filters;
+        $categoryId = $marketFilters['category_id'] ?? null;
+        $marketFilters['category_id'] = null;
+
+        if (empty($marketFilters['group_id']) && $categoryId) {
+            $marketFilters['group_id'] = VacancyCategory::query()->whereKey($categoryId)->value('group_id');
+        }
+
+        $vacancies = $this->marketQuery($marketFilters, [])->limit(500)->get();
+        $selectedSkills = Skill::query()->whereKey($skillIds)->get(['id', 'title'])->keyBy('id');
+
+        return $vacancies
+            ->filter(fn (Vacancy $vacancy) => $vacancy->category?->group)
+            ->groupBy(fn (Vacancy $vacancy) => $vacancy->category->group_id)
+            ->map(function ($groupVacancies) use ($skillIds, $selectedSkills, $filters, $next) {
+                $group = $groupVacancies->first()->category->group;
+                $total = $groupVacancies->count();
+                $skillsInVacancies = $groupVacancies->flatMap->skills->groupBy('id');
+
+                $matchedSkills = $selectedSkills
+                    ->map(function (Skill $skill) use ($skillsInVacancies, $total) {
+                        $count = ($skillsInVacancies->get($skill->id) ?? collect())->count();
+                        return [
+                            'id' => $skill->id,
+                            'title' => $skill->title,
+                            'percent' => $total ? (int) round($count / $total * 100) : 0,
+                            'vacancies_count' => $count,
+                        ];
+                    })
+                    ->sortByDesc('percent')
+                    ->values();
+
+                $roles = $groupVacancies
+                    ->groupBy('vacancy_category_id')
+                    ->map(function ($categoryVacancies) use ($skillIds) {
+                        $sample = $categoryVacancies->first();
+                        $roleSkills = $categoryVacancies->flatMap->skills->unique('id');
+                        $matched = $roleSkills->whereIn('id', $skillIds)->count();
+
+                        return [
+                            'category_id' => $sample->category->id,
+                            'title' => $sample->category->title,
+                            'fit' => $skillIds ? (int) round($matched / count($skillIds) * 100) : 0,
+                            'vacancies_count' => $categoryVacancies->count(),
+                        ];
+                    })
+                    ->filter(fn (array $role) => $role['fit'] > 0)
+                    ->sortByDesc('fit')
+                    ->take(3)
+                    ->values()
+                    ->all();
+
+                $nextVacancies = collect();
+                if ($next) {
+                    $nextFilters = $filters;
+                    $nextFilters['group_id'] = $group->id;
+                    $nextFilters['category_id'] = null;
+                    $nextVacancies = $this->nextLevelVacancies($nextFilters, $next);
+                }
+
+                return [
+                    'group_id' => $group->id,
+                    'group' => $group->title,
+                    'matched_skills' => $matchedSkills->all(),
+                    'roles' => $roles,
+                    'skills_to_build' => $this->skillGaps($nextVacancies, $skillIds),
+                    'score' => $matchedSkills->sum('percent'),
+                ];
+            })
+            ->filter(fn (array $direction) => count($direction['roles']) > 0)
+            ->sortByDesc('score')
+            ->take(3)
+            ->map(function (array $direction) {
+                unset($direction['score']);
+                return $direction;
+            })
             ->values()
             ->all();
     }

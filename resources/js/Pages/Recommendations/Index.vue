@@ -5,7 +5,7 @@
       <h1 class="mt-2 text-3xl font-semibold tracking-tight text-[#202223]">Поймите, где вы сейчас и куда расти дальше</h1>
       <p class="mt-3 max-w-3xl text-[#616161]">Сначала оценим рабочий уровень, затем учтём навыки и выбранное направление. Это займёт несколько минут.</p>
 
-      <div v-if="readonlyReport" class="mt-8"><section class="report"><ReportContent :result="result" :error="error" :career-path="careerPath" :copied="copied" @copy="copyLink" /></section></div>
+      <div v-if="readonlyReport" class="mt-8"><section class="report"><ReportContent :result="result" :error="error" :career-paths="careerPaths" :copied="copied" @copy="copyLink" /></section></div>
 
       <div v-else class="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <form class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm" @submit.prevent="submit">
@@ -17,7 +17,7 @@
         </form>
         <aside class="rounded-xl border border-[#e1e3e5] bg-[#f7f8f8] p-6"><p class="text-sm font-semibold text-[#008060]">Что вы получите</p><h2 class="mt-2 text-xl font-semibold">Персональный ориентир развития</h2><ul class="mt-5 space-y-4 text-sm text-[#616161]"><li><b>Текущий уровень</b><br/>по опыту и самостоятельности, а не только по навыкам.</li><li><b>Следующий шаг</b><br/>достижимая роль в выбранном направлении.</li><li><b>План развития</b><br/>навыки, которые помогут подготовиться к переходу.</li></ul></aside>
       </div>
-      <section v-if="!readonlyReport && result" class="mt-8"><ReportContent :result="result" :error="error" :career-path="careerPath" :copied="copied" @copy="copyLink" /></section>
+      <section v-if="!readonlyReport && result" class="mt-8"><ReportContent :result="result" :error="error" :career-paths="careerPaths" :copied="copied" @copy="copyLink" /></section>
     </main>
   </AppLayout>
 </template>
@@ -49,7 +49,17 @@ const nextStep = () => { formError.value = ''; if (step.value === 1 && (!form.va
 const request = async (url, options = {}) => { const response = await fetch(url, { headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, ...options }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Не удалось сформировать план'); return data; };
 const submit = async () => { loading.value = true; error.value = ''; try { const data = await request('/api/recommendations', { method: 'POST', body: JSON.stringify(form.value) }); result.value = data.data; uuid.value = data.data.report_uuid; history.replaceState({}, '', `/recommendations/${uuid.value}`); } catch (exception) { error.value = exception.message; } finally { loading.value = false; } };
 const copyLink = async () => { await navigator.clipboard.writeText(result.value.report_url); copied.value = true; setTimeout(() => copied.value = false, 1500); };
-const careerPath = computed(() => { const categoryId = result.value?.input_data?.category_id || result.value?.opportunities?.[0]?.category_id; let node = new Map(props.categories.map(item => [item.id, item])).get(categoryId), path = []; while (node) { path.unshift(node); node = props.categories.find(item => item.id === node.parent_id); } return path; });
+const careerPaths = computed(() => {
+  const directions = result.value?.directions || [];
+  const source = directions.length ? directions.map(item => ({ group: item.group, category_id: item.roles?.[0]?.category_id })) : [{ group: 'Подходящая роль', category_id: result.value?.input_data?.category_id || result.value?.opportunities?.[0]?.category_id }];
+  const categoriesById = new Map(props.categories.map(item => [item.id, item]));
+
+  return source.map(item => {
+    let node = categoriesById.get(item.category_id), nodes = [];
+    while (node) { nodes.unshift(node); node = categoriesById.get(node.parent_id); }
+    return { group: item.group, nodes };
+  }).filter(item => item.nodes.length);
+});
 onMounted(async () => { if (!uuid.value) return; try { const data = await request(`/api/recommendations/${uuid.value}`); result.value = data.data; } catch (exception) { error.value = exception.message; } });
 </script>
 
