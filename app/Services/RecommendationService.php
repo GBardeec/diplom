@@ -40,7 +40,9 @@ class RecommendationService
             ],
             'assessment' => $assessment,
             'portfolio_evidence' => $this->portfolioEvidence($current, $next, $gaps),
-            'roadmap' => $this->roadmap($current, $next, $gaps),
+            // Конкретные дефициты показаны внутри каждого направления. В общем
+            // плане не смешиваем стек разработки, аналитики и администрирования.
+            'roadmap' => $this->roadmap($current, $next, []),
             'meta' => ['total' => $vacancies->count(), 'message' => $skills ? 'Профиль составлен по вашим навыкам и данным вакансий.' : 'Добавьте навыки, чтобы сделать профиль точнее.'],
         ];
     }
