@@ -38,6 +38,7 @@ class HierarchyController extends Controller
                     'grades_count' => $stats['grades_count'],
                     'salary_stats' => $stats['salary_stats'],
                     'top_skills' => $stats['top_skills'],
+                    'top_skills_by_grade' => $stats['top_skills_by_grade'],
                     'top_locations' => $stats['top_locations'],
                 'grades_distribution' => $stats['grades_distribution'],
                 'employment_stats' => $stats['employment_stats'],
