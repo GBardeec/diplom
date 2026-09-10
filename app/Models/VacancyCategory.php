@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class VacancyCategory extends Model
 {
@@ -71,8 +72,9 @@ class VacancyCategory extends Model
         return $this->parent()->with('ancestors');
     }
 
-    public function vacancies(): HasMany
+    public function vacancies(): BelongsToMany
     {
-        return $this->hasMany(Vacancy::class, 'vacancy_category_id');
+        return $this->belongsToMany(Vacancy::class, 'vacancy_category_vacancy')
+            ->withTimestamps();
     }
 }

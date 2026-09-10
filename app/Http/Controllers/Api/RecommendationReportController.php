@@ -47,13 +47,7 @@ class RecommendationReportController extends Controller
             'group_id' => ['nullable', 'integer', 'exists:vacancy_groups,id'],
             'category_id' => ['nullable', 'integer', 'exists:vacancy_categories,id'],
             'qualification_id' => ['nullable', 'integer', 'exists:qualifications,id'],
-            'city_id' => ['nullable', 'integer', 'exists:locations,id'],
-            'remote_only' => ['nullable', 'boolean'],
-            'employment' => ['nullable', 'in:full_time,part_time,project,internship'],
-            'salary_from' => ['nullable', 'integer', 'min:0'],
-            'salary_to' => ['nullable', 'integer', 'min:0', 'gte:salary_from'],
-            'limit' => ['nullable', 'integer', 'min:1', 'max:50'],
-        ]) + ['limit' => 20];
+        ]);
     }
 
     private function payload(RecommendationReport $report, array $result): array

@@ -66,10 +66,11 @@ class HierarchyController extends Controller
     {
         // Получаем ID всех вакансий категории
         $vacancyIds = DB::table('vacancies')
-            ->where('vacancy_category_id', $categoryId)
+            ->join('vacancy_category_vacancy', 'vacancy_category_vacancy.vacancy_id', '=', 'vacancies.id')
+            ->where('vacancy_category_vacancy.vacancy_category_id', $categoryId)
             ->where('archived', false)
             ->where('hidden', false)
-            ->pluck('id');
+            ->pluck('vacancies.id');
 
         if ($vacancyIds->isEmpty()) {
             return [

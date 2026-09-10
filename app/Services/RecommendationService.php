@@ -7,6 +7,7 @@ use App\Models\Skill;
 use App\Models\Vacancy;
 use App\Models\VacancyCategory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 class RecommendationService
 {
@@ -50,9 +51,9 @@ class RecommendationService
     private function marketQuery(array $filters, array $skills): Builder
     {
         $query = Vacancy::query()->where('archived', false)->where('hidden', false)
-            ->with(['category.group', 'qualification', 'salary', 'skills', 'locations']);
-        if (!empty($filters['category_id'])) $query->where('vacancy_category_id', $filters['category_id']);
-        elseif (!empty($filters['group_id'])) $query->whereHas('category', fn (Builder $q) => $q->where('group_id', $filters['group_id']));
+            ->with(['categories.group', 'qualification', 'salary', 'skills', 'locations']);
+        if (!empty($filters['category_id'])) $query->whereHas('categories', fn (Builder $q) => $q->whereKey($filters['category_id']));
+        elseif (!empty($filters['group_id'])) $query->whereHas('categories', fn (Builder $q) => $q->where('group_id', $filters['group_id']));
         if ($skills) $query->whereHas('skills', fn (Builder $q) => $q->whereIn('skills.id', $skills));
         return $query;
     }
@@ -242,14 +243,22 @@ class RecommendationService
 
     private function opportunities($vacancies, array $skillIds): array
     {
-        return $vacancies->filter(fn ($item) => $item->category)
-            ->groupBy('vacancy_category_id')->map(function ($items) use ($skillIds) {
-                $sample = $items->first();
-                $matched = $items->flatMap->skills->whereIn('id', $skillIds)->unique('id')->count();
-                $marketSkills = $items->flatMap->skills->unique('id')->count();
-                $salary = $items->pluck('salary')->filter()->map(fn ($item) => $item->from ?: $item->to)->filter()->avg();
-                return ['category_id' => $sample->category->id, 'title' => $sample->category->title, 'group' => $sample->category->group?->title, 'fit' => $marketSkills ? min(100, round($matched / min($marketSkills, max(1, count($skillIds))) * 100)) : 0, 'vacancies_count' => $items->count(), 'salary' => $salary ? round($salary) : null, 'market_level' => $sample->category->market_level, 'market_salary_median' => $sample->category->market_salary_median];
+        return $this->categorizedVacancies($vacancies)
+            ->groupBy(fn (array $item) => $item['category']->id)
+            ->map(function (Collection $items) use ($skillIds) {
+                $vacancies = $items->pluck('vacancy')->unique('id')->values();
+                $category = $items->first()['category'];
+                $matched = $vacancies->flatMap->skills->whereIn('id', $skillIds)->unique('id')->count();
+                $marketSkills = $vacancies->flatMap->skills->unique('id')->count();
+                $salary = $vacancies->pluck('salary')->filter()->map(fn ($item) => $item->from ?: $item->to)->filter()->avg();
+                return ['category_id' => $category->id, 'title' => $category->title, 'group' => $category->group?->title, 'fit' => $marketSkills ? min(100, round($matched / min($marketSkills, max(1, count($skillIds))) * 100)) : 0, 'vacancies_count' => $vacancies->count(), 'salary' => $salary ? round($salary) : null, 'market_level' => $category->market_level, 'market_salary_median' => $category->market_salary_median];
             })->sortByDesc('fit')->take(3)->values()->all();
+    }
+
+    private function categorizedVacancies(Collection $vacancies): Collection
+    {
+        return $vacancies->flatMap(fn (Vacancy $vacancy) => $vacancy->categories
+            ->map(fn (VacancyCategory $category) => ['vacancy' => $vacancy, 'category' => $category]));
     }
 
     private function skillGaps($vacancies, array $skillIds): array
@@ -286,16 +295,17 @@ class RecommendationService
 
         $relevantQualificationIds = collect([$current->id, $next?->id])->filter()->all();
 
-        return $vacancies
-            ->filter(fn (Vacancy $vacancy) => $vacancy->category?->group)
-            ->groupBy(fn (Vacancy $vacancy) => $vacancy->category->group_id)
-            ->map(function ($groupVacancies) use ($skillIds, $selectedSkills, $filters, $next, $relevantQualificationIds) {
-                $relevantVacancies = $groupVacancies->whereIn('qualification_id', $relevantQualificationIds);
+        return $this->categorizedVacancies($vacancies)
+            ->filter(fn (array $item) => $item['category']->group)
+            ->groupBy(fn (array $item) => $item['category']->group_id)
+            ->map(function (Collection $groupRows) use ($skillIds, $selectedSkills, $filters, $next, $relevantQualificationIds) {
+                $relevantRows = $groupRows->filter(fn (array $item) => in_array($item['vacancy']->qualification_id, $relevantQualificationIds, true));
+                $relevantVacancies = $relevantRows->pluck('vacancy')->unique('id')->values();
                 if ($relevantVacancies->count() < 3) {
                     return null;
                 }
 
-                $group = $relevantVacancies->first()->category->group;
+                $group = $relevantRows->first()['category']->group;
                 $total = $relevantVacancies->count();
                 $skillsInVacancies = $relevantVacancies->flatMap->skills->groupBy('id');
 
@@ -319,10 +329,11 @@ class RecommendationService
                     ->values()
                     ->all();
 
-                $roles = $relevantVacancies
-                    ->groupBy('vacancy_category_id')
-                    ->map(function ($categoryVacancies) use ($skillIds, $selectedSkills) {
-                        $sample = $categoryVacancies->first();
+                $roles = $relevantRows
+                    ->groupBy(fn (array $item) => $item['category']->id)
+                    ->map(function (Collection $categoryRows) use ($skillIds, $selectedSkills) {
+                        $categoryVacancies = $categoryRows->pluck('vacancy')->unique('id')->values();
+                        $category = $categoryRows->first()['category'];
                         $roleSkills = $categoryVacancies->flatMap->skills->unique('id');
                         $matched = $roleSkills->whereIn('id', $skillIds)->count();
                         $roleSkillsWithFrequency = $categoryVacancies
@@ -352,13 +363,13 @@ class RecommendationService
                             ->all();
 
                         return [
-                            'category_id' => $sample->category->id,
-                            'title' => $sample->category->title,
+                            'category_id' => $category->id,
+                            'title' => $category->title,
                             'matched_skills_count' => $matched,
                             'selected_skills_count' => count($skillIds),
                             'vacancies_count' => $categoryVacancies->count(),
-                            'market_level' => $sample->category->market_level,
-                            'market_salary_median' => $sample->category->market_salary_median,
+                            'market_level' => $category->market_level,
+                            'market_salary_median' => $category->market_salary_median,
                             'skills' => $roleSkillsWithFrequency,
                             'locations' => $locations,
                         ];

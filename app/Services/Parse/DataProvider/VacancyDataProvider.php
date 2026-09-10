@@ -45,7 +45,23 @@ class VacancyDataProvider extends AbstractDataProvider
             ]));
         }
 
-        echo 'All categories downloaded: ' . count($vacancies) . " vacancies\n";
+        $vacanciesByExternalId = [];
+        foreach ($vacancies as $vacancy) {
+            $externalId = $vacancy['external_id'];
+            $categoryId = $vacancy['vacancy_category_id'];
+
+            if (!isset($vacanciesByExternalId[$externalId])) {
+                $vacancy['category_ids'] = [$categoryId];
+                $vacanciesByExternalId[$externalId] = $vacancy;
+                continue;
+            }
+
+            $vacanciesByExternalId[$externalId]['category_ids'][] = $categoryId;
+            $vacanciesByExternalId[$externalId]['category_ids'] = array_values(array_unique($vacanciesByExternalId[$externalId]['category_ids']));
+        }
+
+        $vacancies = array_values($vacanciesByExternalId);
+        echo 'All categories downloaded: ' . count($vacancies) . " unique vacancies\n";
 
         return $vacancies;
     }
@@ -172,11 +188,13 @@ class VacancyDataProvider extends AbstractDataProvider
                     $locationsData = $vacancyData['locations'] ?? [];
                     $divisionsData = $vacancyData['divisions'] ?? [];
                     $salaryData = $vacancyData['salary'] ?? [];
+                    $categoryIds = $vacancyData['category_ids'] ?? [$vacancyData['vacancy_category_id'] ?? null];
+                    $categoryIds = array_values(array_filter($categoryIds));
 
                     // Создаем копию без связанных данных
                     $vacancyDataForSave = $vacancyData;
                     unset($vacancyDataForSave['skills'], $vacancyDataForSave['locations'],
-                        $vacancyDataForSave['divisions'], $vacancyDataForSave['salary']);
+                        $vacancyDataForSave['divisions'], $vacancyDataForSave['salary'], $vacancyDataForSave['category_ids']);
 
                     $qualification = Qualification::firstOrCreate([
                         'title' => $vacancyDataForSave['qualification_title'],
@@ -185,10 +203,15 @@ class VacancyDataProvider extends AbstractDataProvider
                     unset($vacancyDataForSave['qualification_title']);
 
                     // Создаем или обновляем вакансию
-                    $vacancy = Vacancy::updateOrCreate(
-                        ['external_id' => $vacancyDataForSave['external_id']],
-                        $vacancyDataForSave
-                    );
+                    $vacancy = Vacancy::firstOrNew(['external_id' => $vacancyDataForSave['external_id']]);
+                    if ($vacancy->exists) {
+                        // Старое поле оставляем как совместимый основной ярлык.
+                        // Полный набор категорий хранится в отдельной связи ниже.
+                        unset($vacancyDataForSave['vacancy_category_id']);
+                    }
+                    $vacancy->fill($vacancyDataForSave);
+                    $vacancy->save();
+                    $vacancy->categories()->sync($categoryIds);
 
                     // Обрабатываем навыки (many-to-many)
                     $this->syncSkills($vacancy, $skillsData);

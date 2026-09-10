@@ -36,6 +36,7 @@ class CareerMapService
     private function salaryValues(): Collection
     {
         return DB::table('vacancies')
+            ->join('vacancy_category_vacancy', 'vacancy_category_vacancy.vacancy_id', '=', 'vacancies.id')
             ->join('salaries', 'salaries.vacancy_id', '=', 'vacancies.id')
             ->where('vacancies.archived', false)
             ->where('vacancies.hidden', false)
@@ -43,7 +44,7 @@ class CareerMapService
             ->where(function ($query) {
                 $query->whereNotNull('salaries.from')->orWhereNotNull('salaries.to');
             })
-            ->selectRaw('vacancies.vacancy_category_id as category_id, CASE WHEN salaries.`from` IS NOT NULL AND salaries.`to` IS NOT NULL THEN (salaries.`from` + salaries.`to`) / 2 WHEN salaries.`from` IS NOT NULL THEN salaries.`from` ELSE salaries.`to` END as value')
+            ->selectRaw('vacancy_category_vacancy.vacancy_category_id as category_id, CASE WHEN salaries.`from` IS NOT NULL AND salaries.`to` IS NOT NULL THEN (salaries.`from` + salaries.`to`) / 2 WHEN salaries.`from` IS NOT NULL THEN salaries.`from` ELSE salaries.`to` END as value')
             ->get()
             ->groupBy('category_id')
             ->map(fn (Collection $items) => $items->pluck('value')->map(fn ($value) => (int) $value)->sort()->values());
@@ -91,10 +92,11 @@ class CareerMapService
         DB::table('career_transitions')->delete();
 
         $skillsByCategory = DB::table('vacancies')
+            ->join('vacancy_category_vacancy', 'vacancy_category_vacancy.vacancy_id', '=', 'vacancies.id')
             ->join('skill_vacancy', 'skill_vacancy.vacancy_id', '=', 'vacancies.id')
             ->where('vacancies.archived', false)
             ->where('vacancies.hidden', false)
-            ->select('vacancies.vacancy_category_id as category_id', 'skill_vacancy.skill_id')
+            ->select('vacancy_category_vacancy.vacancy_category_id as category_id', 'skill_vacancy.skill_id')
             ->distinct()
             ->get()
             ->groupBy('category_id')

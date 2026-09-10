@@ -1,6 +1,5 @@
 <?php
 
-use App\Services\CareerMapService;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -9,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('career_transitions')) {
+            return;
+        }
+
         Schema::create('career_transitions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('from_category_id')->constrained('vacancy_categories')->cascadeOnDelete();
@@ -18,7 +21,6 @@ return new class extends Migration
             $table->unique(['from_category_id', 'to_category_id']);
         });
 
-        app(CareerMapService::class)->rebuild();
     }
 
     public function down(): void

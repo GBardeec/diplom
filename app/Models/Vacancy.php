@@ -85,4 +85,14 @@ class Vacancy extends Model
     {
         return $this->belongsTo(VacancyCategory::class, 'vacancy_category_id');
     }
+
+    /**
+     * Категории, в которых вакансия найдена у источника.
+     * Одна вакансия может относиться сразу к нескольким специализациям.
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(VacancyCategory::class, 'vacancy_category_vacancy')
+            ->withTimestamps();
+    }
 }
