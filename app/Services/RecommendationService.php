@@ -30,7 +30,7 @@ class RecommendationService
         return [
             'profile' => [
                 'current_level' => $current->title,
-                'basis' => 'Оценка по опыту и уровню самостоятельности',
+                'basis' => 'По самооценке опыта и ответственности. Навыки используются для выбора ролей и плана развития.',
                 'skills_count' => count($skills),
             ],
             'opportunities' => $opportunities,
@@ -89,6 +89,10 @@ class RecommendationService
                 $average < 2.7 => 'Senior',
                 default => 'Lead',
             };
+
+            if ($title === 'Lead' && (($filters['commercial_experience'] ?? null) === 'up_to_year' || (array_key_exists('completed_project', $filters) && ! $filters['completed_project']))) {
+                $title = 'Senior';
+            }
 
             return $qualifications->first(fn ($item) => strcasecmp($item->title, $title) === 0) ?? $qualifications->first();
         }
