@@ -38,11 +38,11 @@
                 <div v-if="!marketCategories.length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 text-[#616161]">
                     Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для роли будет не менее трёх таких вакансий.
                 </div>
-                <template v-for="level in 5" :key="level">
+                <template v-for="level in maxMarketLevel" :key="level">
                 <div v-if="getCategoriesByMarketLevel(level).length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                     <h2 class="mb-2 flex items-center gap-2 text-2xl font-semibold text-[#202223]">
                         <span class="shopify-level-badge w-8 h-8 rounded-full flex items-center justify-center text-sm">{{ level }}</span>
-                        Рыночный уровень {{ level }} из 5
+                        Рыночный уровень {{ level }} из {{ maxMarketLevel }}
                     </h2>
                     <p class="mb-4 text-sm text-[#616161]">Роли сгруппированы по медианной зарплате вакансий в выбранном направлении.</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -378,6 +378,7 @@ const filteredOtherCategories = computed(() => {
 });
 
 const marketCategories = computed(() => filteredCategories.value.filter(category => category.market_level));
+const maxMarketLevel = computed(() => Math.max(0, ...marketCategories.value.map(category => Number(category.market_level))));
 const diagramNodes = computed(() => marketCategories.value);
 
 const groupMap = computed(() => new Map(props.groups.map(g => [g.id, g.title])));

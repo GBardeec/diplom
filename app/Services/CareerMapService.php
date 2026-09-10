@@ -69,7 +69,9 @@ class CareerMapService
             $lastIndex = max(1, $ordered->count() - 1);
 
             $ordered->each(function (array $item, int $index) use ($lastIndex, &$marketCategories) {
-                $level = (int) floor($index / $lastIndex * 4) + 1;
+                $level = $lastIndex <= 4
+                    ? $index + 1
+                    : (int) floor($index / $lastIndex * 4) + 1;
                 VacancyCategory::query()->whereKey($item['id'])->update([
                     'market_level' => $level,
                     'market_salary_median' => $item['median'],

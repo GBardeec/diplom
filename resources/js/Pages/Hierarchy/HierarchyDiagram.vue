@@ -39,16 +39,18 @@ const layout = computed(() => {
         byLevel.get(level).push(node);
     });
     const maxCount = Math.max(1, ...[...byLevel.values()].map(nodes => nodes.length));
+    const maxLevel = Math.max(1, ...[...byLevel.keys()]);
+    const levelNumbers = Array.from({ length: maxLevel }, (_, index) => index + 1);
     const width = Math.max(760, LEFT_PADDING * 2 + maxCount * CARD_WIDTH + Math.max(0, maxCount - 1) * NODE_GAP);
     const positioned = [];
-    [1, 2, 3, 4, 5].forEach((level, index) => {
+    levelNumbers.forEach((level, index) => {
         const nodes = (byLevel.get(level) || []).sort((a, b) => Number(a.market_salary_median) - Number(b.market_salary_median));
         const rowWidth = nodes.length * CARD_WIDTH + Math.max(0, nodes.length - 1) * NODE_GAP;
         const firstX = (width - rowWidth) / 2 + CARD_WIDTH / 2;
         const y = TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP);
         nodes.forEach((node, nodeIndex) => positioned.push({ ...node, x: firstX + nodeIndex * (CARD_WIDTH + NODE_GAP), y }));
     });
-    const levels = [1, 2, 3, 4, 5].map((number, index) => {
+    const levels = levelNumbers.map((number, index) => {
         const y = TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP);
         return { number, y, x: LEFT_PADDING - 10, width: width - LEFT_PADDING - 14, frameY: y - 10, height: CARD_HEIGHT + 20 };
     });
@@ -57,7 +59,7 @@ const layout = computed(() => {
         const x = width / 2;
         return { from: level.number, path: `M ${x} ${level.frameY + level.height} V ${next.frameY}` };
     });
-    return { width, height: TOP_PADDING + 5 * CARD_HEIGHT + 4 * LEVEL_GAP + 28, nodes: positioned, levelArrows, levels };
+    return { width, height: TOP_PADDING + maxLevel * CARD_HEIGHT + Math.max(0, maxLevel - 1) * LEVEL_GAP + 28, nodes: positioned, levelArrows, levels };
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
 const selectNode = node => { emit('select', node); emit('show-details', node); };
