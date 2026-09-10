@@ -330,6 +330,7 @@ const viewMode = ref('table');
 const selectedTreeNode = ref(null);
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
+const requestedGroupId = Number(new URLSearchParams(window.location.search).get('group')) || null;
 let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
@@ -361,7 +362,9 @@ const otherCategories = computed(() => {
 
 watch(() => props.groups, (groups) => {
     if (!groups.some(group => group.id === selectedGroupId.value)) {
-        selectedGroupId.value = groups[0]?.id ?? null;
+        selectedGroupId.value = groups.some(group => group.id === requestedGroupId)
+            ? requestedGroupId
+            : groups[0]?.id ?? null;
     }
 }, { immediate: true });
 

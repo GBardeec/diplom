@@ -50,7 +50,7 @@ class RecommendationService
     private function marketQuery(array $filters, array $skills): Builder
     {
         $query = Vacancy::query()->where('archived', false)->where('hidden', false)
-            ->with(['category.group', 'qualification', 'salary', 'skills']);
+            ->with(['category.group', 'qualification', 'salary', 'skills', 'locations']);
         if (!empty($filters['category_id'])) $query->where('vacancy_category_id', $filters['category_id']);
         elseif (!empty($filters['group_id'])) $query->whereHas('category', fn (Builder $q) => $q->where('group_id', $filters['group_id']));
         if ($skills) $query->whereHas('skills', fn (Builder $q) => $q->whereIn('skills.id', $skills));
@@ -317,7 +317,7 @@ class RecommendationService
 
                 $roles = $relevantVacancies
                     ->groupBy('vacancy_category_id')
-                    ->map(function ($categoryVacancies) use ($skillIds) {
+                    ->map(function ($categoryVacancies) use ($skillIds, $selectedSkills) {
                         $sample = $categoryVacancies->first();
                         $roleSkills = $categoryVacancies->flatMap->skills->unique('id');
                         $matched = $roleSkills->whereIn('id', $skillIds)->count();
@@ -328,9 +328,22 @@ class RecommendationService
                                 'id' => $skills->first()->id,
                                 'title' => $skills->first()->title,
                                 'percent' => (int) round($skills->count() / $categoryVacancies->count() * 100),
+                                'selected' => $selectedSkills->has($skills->first()->id),
                             ])
                             ->sortByDesc('percent')
                             ->take(10)
+                            ->values()
+                            ->all();
+                        $locations = $categoryVacancies->flatMap->locations
+                            ->groupBy('id')
+                            ->map(fn ($locations) => [
+                                'id' => $locations->first()->id,
+                                'title' => $locations->first()->title,
+                                'count' => $locations->count(),
+                                'percent' => (int) round($locations->count() / $categoryVacancies->count() * 100),
+                            ])
+                            ->sortByDesc('count')
+                            ->take(3)
                             ->values()
                             ->all();
 
@@ -343,6 +356,7 @@ class RecommendationService
                             'market_level' => $sample->category->market_level,
                             'market_salary_median' => $sample->category->market_salary_median,
                             'skills' => $roleSkillsWithFrequency,
+                            'locations' => $locations,
                         ];
                     })
                     ->filter(fn (array $role) => $role['matched_skills_count'] > 0)
