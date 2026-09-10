@@ -31,6 +31,8 @@ class CareerMapService
             $marketCategories = $this->assignMarketLevels($categories, $salaryValues);
             $this->storeTransitions($marketCategories);
         });
+
+        HierarchyCache::forget();
     }
 
     private function salaryValues(): Collection
@@ -47,7 +49,7 @@ class CareerMapService
             ->selectRaw('vacancy_category_vacancy.vacancy_category_id as category_id, CASE WHEN salaries.`from` IS NOT NULL AND salaries.`to` IS NOT NULL THEN (salaries.`from` + salaries.`to`) / 2 WHEN salaries.`from` IS NOT NULL THEN salaries.`from` ELSE salaries.`to` END as value')
             ->get()
             ->groupBy('category_id')
-            ->map(fn (Collection $items) => $items->pluck('value')->map(fn ($value) => (int) $value)->sort()->values());
+            ->map(fn(Collection $items) => $items->pluck('value')->map(fn($value) => (int)$value)->sort()->values());
     }
 
     private function assignMarketLevels(Collection $categories, Collection $salaryValues): Collection
@@ -60,9 +62,9 @@ class CareerMapService
                 'id' => $category->id,
                 'group_id' => $category->group_id,
                 'sample_size' => $sampleSize,
-                'median' => $sampleSize >= self::MIN_SALARY_SAMPLE ? (int) round($this->median($values)) : null,
+                'median' => $sampleSize >= self::MIN_SALARY_SAMPLE ? (int)round($this->median($values)) : null,
             ];
-        })->filter(fn (array $item) => $item['median'] !== null);
+        })->filter(fn(array $item) => $item['median'] !== null);
 
         $marketCategories = collect();
         $stats->groupBy('group_id')->each(function (Collection $groupItems) use (&$marketCategories) {
@@ -72,7 +74,7 @@ class CareerMapService
             $ordered->each(function (array $item, int $index) use ($lastIndex, &$marketCategories) {
                 $level = $lastIndex <= 4
                     ? $index + 1
-                    : (int) floor($index / $lastIndex * 4) + 1;
+                    : (int)floor($index / $lastIndex * 4) + 1;
                 VacancyCategory::query()->whereKey($item['id'])->update([
                     'market_level' => $level,
                     'market_salary_median' => $item['median'],
@@ -100,7 +102,7 @@ class CareerMapService
             ->distinct()
             ->get()
             ->groupBy('category_id')
-            ->map(fn (Collection $items) => $items->pluck('skill_id')->map(fn ($id) => (int) $id)->all());
+            ->map(fn(Collection $items) => $items->pluck('skill_id')->map(fn($id) => (int)$id)->all());
 
         $rows = [];
         $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, &$rows) {
@@ -111,7 +113,7 @@ class CareerMapService
                 }
 
                 $candidates = $groupItems
-                    ->filter(fn (array $target) => $target['market_level'] > $source['market_level'])
+                    ->filter(fn(array $target) => $target['market_level'] > $source['market_level'])
                     ->map(function (array $target) use ($sourceSkills, $skillsByCategory) {
                         $targetSkills = $skillsByCategory->get($target['id'], []);
                         $intersection = count(array_intersect($sourceSkills, $targetSkills));
@@ -119,7 +121,7 @@ class CareerMapService
                         $target['similarity'] = $union ? $intersection / $union : 0;
                         return $target;
                     })
-                    ->filter(fn (array $target) => $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
+                    ->filter(fn(array $target) => $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
                     ->sortBy([
                         ['market_level', 'asc'],
                         ['similarity', 'desc'],

@@ -4,12 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\VacancyCategory;
 use App\Models\VacancyGroup;
+use App\Services\HierarchyCache;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class HierarchyController extends Controller
 {
     public function index()
+    {
+        $data = HierarchyCache::remember(fn () => $this->buildHierarchyData());
+
+        return Inertia::render('Hierarchy/Index', $data);
+    }
+
+    private function buildHierarchyData(): array
     {
         $categories = VacancyCategory::with(['parent'])
             ->withCount('vacancies')
@@ -45,7 +53,9 @@ class HierarchyController extends Controller
                 'employment_stats' => $stats['employment_stats'],
                 'publication_timeline' => $stats['publication_timeline'],
                 ];
-            });
+            })
+            ->values()
+            ->all();
 
         $groups = VacancyGroup::all()->map(function ($group) {
             return [
@@ -54,12 +64,12 @@ class HierarchyController extends Controller
                 'title' => $group->title,
                 'description' => $group->description,
             ];
-        });
+        })->values()->all();
 
-        return Inertia::render('Hierarchy/Index', [
+        return [
             'categories' => $categories,
             'groups' => $groups,
-        ]);
+        ];
     }
 
     private function getVacancyStats($categoryId)
