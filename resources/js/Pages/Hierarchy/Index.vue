@@ -225,7 +225,7 @@
                                 География вакансий
                             </h3>
                             <p class="text-sm text-[#616161]">Распределение вакансий по городам и средняя зарплата по вакансиям с указанной оплатой.</p>
-                            <div v-if="locationGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр городов по грейду">
+                            <div v-if="locationGradeOptions.length" class="mt-3 mb-4 flex flex-wrap gap-2" aria-label="Фильтр городов по грейду">
                                 <button type="button" :class="skillGradeButtonClass(null, selectedLocationsGradeId)" @click="selectedLocationsGradeId = null">Все вакансии</button>
                                 <button v-for="grade in locationGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedLocationsGradeId)" @click="selectedLocationsGradeId = grade.grade_id">{{ grade.title }}</button>
                             </div>
