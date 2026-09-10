@@ -41,7 +41,7 @@
                 <div
                     v-for="level in 5"
                     :key="level"
-                    v-show="getCategoriesByMarketLevel(level).length"
+                    v-if="getCategoriesByMarketLevel(level).length"
                     class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm"
                 >
                     <h2 class="mb-2 flex items-center gap-2 text-2xl font-semibold text-[#202223]">
