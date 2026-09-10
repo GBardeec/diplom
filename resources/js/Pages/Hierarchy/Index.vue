@@ -227,7 +227,7 @@
                             <h3 class="mb-1 text-lg font-semibold text-[#202223]">
                                 География вакансий
                             </h3>
-                            <p class="text-sm text-[#616161]">Распределение вакансий по городам.</p>
+                            <p class="text-sm text-[#616161]">Распределение вакансий по городам и средняя зарплата по вакансиям с указанной оплатой.</p>
                             <div v-if="locationGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр городов по грейду">
                                 <button type="button" :class="skillGradeButtonClass(null, selectedLocationsGradeId)" @click="selectedLocationsGradeId = null">Все вакансии</button>
                                 <button v-for="grade in locationGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedLocationsGradeId)" @click="selectedLocationsGradeId = grade.grade_id">{{ grade.title }}</button>
@@ -242,6 +242,7 @@
                                         <span class="font-semibold text-[#202223]">{{ location.title }}</span>
                                         <span class="text-sm text-[#4a4f54]">{{ vacancyLabel(location.count) }} ({{ location.percentage }}%)</span>
                                     </div>
+                                    <p class="mb-2 text-sm text-[#006e52]">Средняя зарплата: {{ formatSalaryValue(location.salary_avg) }}</p>
                                     <div class="w-full bg-[#e1e3e5] rounded-full h-2 overflow-hidden">
                                         <div class="bg-[#008060] h-2 rounded-full transition-all duration-300" :style="{ width: location.percentage + '%' }"></div>
                                     </div>

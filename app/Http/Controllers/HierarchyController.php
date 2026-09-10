@@ -188,6 +188,7 @@ class HierarchyController extends Controller
             ->values();
 
         // Топ локации
+        $locationSalaryAverages = $this->locationSalaryAverages($vacancyIds);
         $topLocations = DB::table('location_vacancy')
             ->join('locations', 'location_vacancy.location_id', '=', 'locations.id')
             ->whereIn('location_vacancy.vacancy_id', $vacancyIds)
@@ -195,8 +196,9 @@ class HierarchyController extends Controller
             ->groupBy('locations.id', 'locations.title')
             ->orderBy('count', 'desc')
             ->get()
-            ->map(function ($location) use ($vacancyIds) {
+            ->map(function ($location) use ($vacancyIds, $locationSalaryAverages) {
                 $location->percentage = round(($location->count / $vacancyIds->count()) * 100);
+                $location->salary_avg = $locationSalaryAverages[$location->location_id] ?? null;
                 return $location;
             });
 
@@ -215,6 +217,7 @@ class HierarchyController extends Controller
                     ->whereIn('id', $vacancyIds)
                     ->where('qualification_id', $gradeId)
                     ->count();
+                $salaryAverages = $this->locationSalaryAverages($vacancyIds, (int) $gradeId);
                 return [
                     'grade_id' => (int) $gradeId,
                     'title' => $locations->first()->grade_title,
@@ -223,6 +226,7 @@ class HierarchyController extends Controller
                         'title' => $location->title,
                         'count' => $location->count,
                         'percentage' => $gradeVacanciesCount ? round($location->count / $gradeVacanciesCount * 100) : 0,
+                        'salary_avg' => $salaryAverages[$location->location_id] ?? null,
                     ])->values(),
                 ];
             })
@@ -343,5 +347,23 @@ class HierarchyController extends Controller
             str_contains($grade, 'lead') => 5,
             default => 6,
         };
+    }
+
+    private function locationSalaryAverages($vacancyIds, ?int $gradeId = null): array
+    {
+        return DB::table('vacancies')
+            ->join('location_vacancy', 'vacancies.id', '=', 'location_vacancy.vacancy_id')
+            ->join('salaries', 'vacancies.id', '=', 'salaries.vacancy_id')
+            ->whereIn('vacancies.id', $vacancyIds)
+            ->where('salaries.currency', 'rur')
+            ->where(function ($query) {
+                $query->whereNotNull('salaries.from')->orWhereNotNull('salaries.to');
+            })
+            ->when($gradeId !== null, fn ($query) => $query->where('vacancies.qualification_id', $gradeId))
+            ->selectRaw('location_vacancy.location_id, AVG(CASE WHEN salaries.`from` IS NOT NULL AND salaries.`to` IS NOT NULL THEN (salaries.`from` + salaries.`to`) / 2 WHEN salaries.`from` IS NOT NULL THEN salaries.`from` ELSE salaries.`to` END) as salary_avg')
+            ->groupBy('location_vacancy.location_id')
+            ->pluck('salary_avg', 'location_id')
+            ->map(fn ($salary) => (int) round($salary))
+            ->all();
     }
 }
