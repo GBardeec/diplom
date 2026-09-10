@@ -141,7 +141,7 @@
                         <!-- Динамика публикаций -->
                         <div
                             v-if="publicationTimeline.length"
-                            class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
+                            class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4 pb-6"
                         >
                             <div class="flex items-baseline justify-between gap-3">
                                 <h3 class="text-lg font-semibold text-[#202223]">Динамика публикаций</h3>
