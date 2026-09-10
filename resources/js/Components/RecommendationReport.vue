@@ -44,7 +44,7 @@ const comparisonRoleId = ref(null);
 const directions = computed(() => props.result?.directions || []);
 const activeDirection = computed(() => directions.value[activeDirectionIndex.value] || directions.value[0] || null);
 const activeRole = computed(() => activeDirection.value?.roles?.find(role => role.category_id === activeRoleId.value) || activeDirection.value?.roles?.[0] || null);
-const comparisonOptions = computed(() => (activeDirection.value?.roles || []).filter(role => role.category_id !== activeRole.value?.category_id));
+const comparisonOptions = computed(() => []);
 const comparisonRole = computed(() => comparisonOptions.value.find(role => role.category_id === comparisonRoleId.value) || null);
 const commonSkills = computed(() => activeRole.value?.skills?.filter(skill => comparisonRole.value?.skills?.some(other => other.id === skill.id)).map(skill => skill.title) || []);
 const onlyActiveSkills = computed(() => activeRole.value?.skills?.filter(skill => !comparisonRole.value?.skills?.some(other => other.id === skill.id)).map(skill => skill.title) || []);
