@@ -206,6 +206,10 @@
                                 Ключевые навыки
                             </h3>
                             <p class="text-sm text-[#616161]">Навыки по доле вакансий выбранной роли.</p>
+                            <div v-if="skillGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр навыков по грейду">
+                                <button type="button" :class="skillGradeButtonClass(null)" @click="selectedSkillsGradeId = null">Все вакансии</button>
+                                <button v-for="grade in skillGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id)" @click="selectedSkillsGradeId = grade.grade_id">{{ grade.title }}</button>
+                            </div>
                             <div class="mt-4 space-y-3">
                                 <div v-for="skill in visibleTopSkills" :key="skill.skill_id">
                                     <div class="mb-1 flex items-center justify-between gap-3 text-sm"><span class="font-medium text-[#202223]">{{ skill.title }}</span><span class="text-[#4a4f54]">{{ skill.percentage }}% - {{ vacancyLabel(skill.count) }}</span></div>
@@ -322,11 +326,16 @@ const isLocationsExpanded = ref(false);
 const selectedGroupId = ref(null);
 const viewMode = ref('table');
 const selectedTreeNode = ref(null);
+const selectedSkillsGradeId = ref(null);
 let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
 const maxPublicationCount = computed(() => Math.max(1, ...publicationTimeline.value.map(point => point.count)));
-const allTopSkills = computed(() => selectedCategory.value?.top_skills || []);
+const skillGradeOptions = computed(() => selectedCategory.value?.top_skills_by_grade || []);
+const allTopSkills = computed(() => {
+    if (selectedSkillsGradeId.value === null) return selectedCategory.value?.top_skills || [];
+    return skillGradeOptions.value.find(grade => Number(grade.grade_id) === Number(selectedSkillsGradeId.value))?.skills || [];
+});
 const visibleTopSkills = computed(() => isSkillsExpanded.value ? allTopSkills.value : allTopSkills.value.slice(0, 8));
 const allTopLocations = computed(() => selectedCategory.value?.top_locations || []);
 const visibleTopLocations = computed(() => isLocationsExpanded.value ? allTopLocations.value : allTopLocations.value.slice(0, 8));
@@ -385,6 +394,13 @@ const getCategoriesByMarketLevel = (level) => marketCategories.value
 
 const getIconForCategory = () => '';
 
+const skillGradeButtonClass = (gradeId) => [
+    'rounded-md border px-3 py-1.5 text-xs font-semibold transition',
+    Number(selectedSkillsGradeId.value) === Number(gradeId) && (selectedSkillsGradeId.value !== null || gradeId === null)
+        ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]'
+        : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]',
+];
+
 const formatSalaryValue = (value) => {
     if (!value || value === 0) return 'Не указано';
     return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
@@ -419,6 +435,7 @@ const showCategoryDetails = (category) => {
     }
     isSkillsExpanded.value = false;
     isLocationsExpanded.value = false;
+    selectedSkillsGradeId.value = null;
     selectedCategory.value = category;
     isCategoryModalOpen.value = true;
 };

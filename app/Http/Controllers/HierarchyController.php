@@ -75,6 +75,7 @@ class HierarchyController extends Controller
                 'grades_count' => 0,
                 'salary_stats' => null,
                 'top_skills' => [],
+                'top_skills_by_grade' => [],
                 'top_locations' => [],
                 'grades_distribution' => [],
                 'employment_stats' => [],
@@ -153,6 +154,34 @@ class HierarchyController extends Controller
                 $skill->percentage = round(($skill->count / $vacancyIds->count()) * 100);
                 return $skill;
             });
+
+        $topSkillsByGrade = DB::table('vacancies')
+            ->join('qualifications', 'vacancies.qualification_id', '=', 'qualifications.id')
+            ->join('skill_vacancy', 'vacancies.id', '=', 'skill_vacancy.vacancy_id')
+            ->join('skills', 'skill_vacancy.skill_id', '=', 'skills.id')
+            ->whereIn('vacancies.id', $vacancyIds)
+            ->select('qualifications.id as grade_id', 'qualifications.title as grade_title', 'skills.id as skill_id', 'skills.title', DB::raw('COUNT(*) as count'))
+            ->groupBy('qualifications.id', 'qualifications.title', 'skills.id', 'skills.title')
+            ->orderBy('count', 'desc')
+            ->get()
+            ->groupBy('grade_id')
+            ->map(function ($skills, $gradeId) use ($vacancyIds) {
+                $gradeVacanciesCount = DB::table('vacancies')
+                    ->whereIn('id', $vacancyIds)
+                    ->where('qualification_id', $gradeId)
+                    ->count();
+                return [
+                    'grade_id' => (int) $gradeId,
+                    'title' => $skills->first()->grade_title,
+                    'skills' => $skills->map(fn ($skill) => [
+                        'skill_id' => $skill->skill_id,
+                        'title' => $skill->title,
+                        'count' => $skill->count,
+                        'percentage' => $gradeVacanciesCount ? round($skill->count / $gradeVacanciesCount * 100) : 0,
+                    ])->values(),
+                ];
+            })
+            ->values();
 
         // Топ локации
         $topLocations = DB::table('location_vacancy')
@@ -259,6 +288,7 @@ class HierarchyController extends Controller
                 'by_grade' => $salaryByGrade,
             ],
             'top_skills' => $topSkills,
+            'top_skills_by_grade' => $topSkillsByGrade,
             'top_locations' => $topLocations,
             'grades_distribution' => $gradesDistribution,
             'employment_stats' => $employmentStats,
