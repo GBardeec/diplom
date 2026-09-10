@@ -38,12 +38,8 @@
                 <div v-if="!marketCategories.length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 text-[#616161]">
                     Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для роли будет не менее трёх таких вакансий.
                 </div>
-                <div
-                    v-for="level in 5"
-                    :key="level"
-                    v-if="getCategoriesByMarketLevel(level).length"
-                    class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm"
-                >
+                <template v-for="level in 5" :key="level">
+                <div v-if="getCategoriesByMarketLevel(level).length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                     <h2 class="mb-2 flex items-center gap-2 text-2xl font-semibold text-[#202223]">
                         <span class="shopify-level-badge w-8 h-8 rounded-full flex items-center justify-center text-sm">{{ level }}</span>
                         Рыночный уровень {{ level }} из 5
@@ -71,6 +67,7 @@
                         </div>
                     </div>
                 </div>
+                </template>
 
             </div>
 
