@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Cache;
 
 class HierarchyCache
 {
-    private const KEY = 'hierarchy.structure.v1';
+    private const KEY = 'hierarchy.structure.v2';
 
     public static function remember(Closure $callback): array
     {

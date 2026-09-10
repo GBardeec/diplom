@@ -164,10 +164,14 @@ class HierarchyController extends Controller
             ->groupBy('skills.id', 'skills.title')
             ->orderBy('count', 'desc')
             ->get()
-            ->map(function ($skill) use ($vacancyIds) {
-                $skill->percentage = round(($skill->count / $vacancyIds->count()) * 100);
-                return $skill;
-            });
+            ->map(fn ($skill) => [
+                'skill_id' => (int) $skill->skill_id,
+                'title' => $skill->title,
+                'count' => (int) $skill->count,
+                'percentage' => (int) round($skill->count / $vacancyIds->count() * 100),
+            ])
+            ->values()
+            ->all();
 
         $topSkillsByGrade = DB::table('vacancies')
             ->join('qualifications', 'vacancies.qualification_id', '=', 'qualifications.id')
@@ -192,11 +196,12 @@ class HierarchyController extends Controller
                         'title' => $skill->title,
                         'count' => $skill->count,
                         'percentage' => $gradeVacanciesCount ? round($skill->count / $gradeVacanciesCount * 100) : 0,
-                    ])->values(),
+                    ])->values()->all(),
                 ];
             })
             ->sortBy(fn (array $grade) => $this->gradeSortOrder($grade['title']))
-            ->values();
+            ->values()
+            ->all();
 
         // Топ локации
         $locationSalaryAverages = $this->locationSalaryAverages($vacancyIds);
@@ -207,11 +212,15 @@ class HierarchyController extends Controller
             ->groupBy('locations.id', 'locations.title')
             ->orderBy('count', 'desc')
             ->get()
-            ->map(function ($location) use ($vacancyIds, $locationSalaryAverages) {
-                $location->percentage = round(($location->count / $vacancyIds->count()) * 100);
-                $location->salary_avg = $locationSalaryAverages[$location->location_id] ?? null;
-                return $location;
-            });
+            ->map(fn ($location) => [
+                'location_id' => (int) $location->location_id,
+                'title' => $location->title,
+                'count' => (int) $location->count,
+                'percentage' => (int) round($location->count / $vacancyIds->count() * 100),
+                'salary_avg' => $locationSalaryAverages[$location->location_id] ?? null,
+            ])
+            ->values()
+            ->all();
 
         $topLocationsByGrade = DB::table('vacancies')
             ->join('qualifications', 'vacancies.qualification_id', '=', 'qualifications.id')
@@ -238,11 +247,12 @@ class HierarchyController extends Controller
                         'count' => $location->count,
                         'percentage' => $gradeVacanciesCount ? round($location->count / $gradeVacanciesCount * 100) : 0,
                         'salary_avg' => $salaryAverages[$location->location_id] ?? null,
-                    ])->values(),
+                    ])->values()->all(),
                 ];
             })
             ->sortBy(fn (array $grade) => $this->gradeSortOrder($grade['title']))
-            ->values();
+            ->values()
+            ->all();
 
         // Распределение по грейдам
         $gradesDistribution = DB::table('vacancies')
@@ -265,10 +275,14 @@ class HierarchyController extends Controller
         END
     ")
             ->get()
-            ->map(function ($grade) use ($vacancyIds) {
-                $grade->percentage = round(($grade->count / $vacancyIds->count()) * 100);
-                return $grade;
-            });
+            ->map(fn ($grade) => [
+                'grade_id' => (int) $grade->grade_id,
+                'title' => $grade->title,
+                'count' => (int) $grade->count,
+                'percentage' => (int) round($grade->count / $vacancyIds->count() * 100),
+            ])
+            ->values()
+            ->all();
 
         // Статистика по формату работы
         $employmentStats = [];
