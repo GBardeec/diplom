@@ -244,7 +244,7 @@ class RecommendationService
                 $matched = $items->flatMap->skills->whereIn('id', $skillIds)->unique('id')->count();
                 $marketSkills = $items->flatMap->skills->unique('id')->count();
                 $salary = $items->pluck('salary')->filter()->map(fn ($item) => $item->from ?: $item->to)->filter()->avg();
-                return ['category_id' => $sample->category->id, 'title' => $sample->category->title, 'group' => $sample->category->group?->title, 'fit' => $marketSkills ? min(100, round($matched / min($marketSkills, max(1, count($skillIds))) * 100)) : 0, 'vacancies_count' => $items->count(), 'salary' => $salary ? round($salary) : null];
+                return ['category_id' => $sample->category->id, 'title' => $sample->category->title, 'group' => $sample->category->group?->title, 'fit' => $marketSkills ? min(100, round($matched / min($marketSkills, max(1, count($skillIds))) * 100)) : 0, 'vacancies_count' => $items->count(), 'salary' => $salary ? round($salary) : null, 'market_level' => $sample->category->market_level, 'market_salary_median' => $sample->category->market_salary_median];
             })->sortByDesc('fit')->take(3)->values()->all();
     }
 
@@ -328,6 +328,8 @@ class RecommendationService
                             'matched_skills_count' => $matched,
                             'selected_skills_count' => count($skillIds),
                             'vacancies_count' => $categoryVacancies->count(),
+                            'market_level' => $sample->category->market_level,
+                            'market_salary_median' => $sample->category->market_salary_median,
                         ];
                     })
                     ->filter(fn (array $role) => $role['matched_skills_count'] > 0)

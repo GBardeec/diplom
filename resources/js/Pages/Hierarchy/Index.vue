@@ -5,12 +5,12 @@
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Заголовок -->
             <div class="mb-8 max-w-xl">
-                <p class="mb-2 text-sm font-semibold text-[#008060]">Карта карьерных ролей</p>
+                <p class="mb-2 text-sm font-semibold text-[#008060]">Карта карьерных уровней</p>
                 <h1 class="text-3xl font-semibold tracking-tight text-[#202223]">
-                    Иерархическая структура должностей
+                    Рыночные уровни ролей
                 </h1>
                 <p class="mt-3 text-[#616161]">
-                    Посмотрите, как связаны роли и уровни: от стартовых позиций до архитектурных и управленческих направлений.
+                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. Стрелки показывают возможные переходы между ролями с похожими навыками.
                 </p>
             </div>
 
@@ -19,7 +19,7 @@
                 <div class="flex flex-col gap-3 border-b border-[#e1e3e5] pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="text-sm font-semibold text-[#202223]">Выберите направление</p>
-                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет роли, уровни и карьерные связи ниже.</p>
+                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет роли, рыночные уровни и возможные переходы ниже.</p>
                     </div>
                     <div class="flex w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
                         <button @click="viewMode = 'table'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'table' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Таблица</button>
@@ -35,32 +35,38 @@
 
             <!-- Табличное представление (карточный вид по уровням) -->
             <div v-if="viewMode === 'table'" class="space-y-8">
+                <div v-if="!marketCategories.length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 text-[#616161]">
+                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для роли будет не менее трёх таких вакансий.
+                </div>
                 <div
-                    v-for="level in maxLevel + 1"
+                    v-for="level in 5"
                     :key="level"
-                    class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10"
+                    v-show="getCategoriesByMarketLevel(level).length"
+                    class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm"
                 >
-                    <h2 class="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                    <h2 class="mb-2 flex items-center gap-2 text-2xl font-semibold text-[#202223]">
                         <span class="shopify-level-badge w-8 h-8 rounded-full flex items-center justify-center text-sm">{{ level }}</span>
-                        Уровень {{ level }}
+                        Рыночный уровень {{ level }} из 5
                     </h2>
+                    <p class="mb-4 text-sm text-[#616161]">Роли сгруппированы по медианной зарплате вакансий в выбранном направлении.</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <div
-                            v-for="category in getFilteredCategoriesByLevel(level - 1)"
+                            v-for="category in getCategoriesByMarketLevel(level)"
                             :key="category.id"
-                            class="bg-white/10 rounded-xl p-4 border border-white/10 hover:border-purple-500 transition-all group cursor-pointer"
+                            class="group cursor-pointer rounded-xl border border-[#e1e3e5] bg-[#f7f8f8] p-4 transition hover:border-[#008060]"
                             @click="showCategoryDetails(category)"
                         >
                             <div class="flex items-start justify-between mb-2">
                                 <span class="text-2xl">{{ getIconForCategory(category.title) }}</span>
                             </div>
-                            <h3 class="font-semibold text-white group-hover:text-purple-300 transition">
+                            <h3 class="font-semibold text-[#202223] transition group-hover:text-[#006e52]">
                                 {{ category.title }}
                             </h3>
-                            <p class="text-sm text-white/60 mt-2 line-clamp-2">{{ category.description }}</p>
-                            <div class="mt-3 flex items-center gap-2 text-xs text-white/40">
+                            <p class="mt-2 line-clamp-2 text-sm text-[#616161]">{{ category.description }}</p>
+                            <p class="mt-3 text-sm font-semibold text-[#006e52]">Медиана: {{ formatSalaryValue(category.market_salary_median) }}</p>
+                            <div class="mt-2 flex items-center gap-2 text-xs text-[#6d7175]">
                                 <span>{{ vacancyFoundLabel(category.vacancies_count) }}</span>
-                                <span v-if="category.parent_id">↑ {{ getParentTitle(category.parent_id) }}</span>
+                                <span>В выборке с зарплатой: {{ vacancyLabel(category.market_salary_sample_size) }}</span>
                             </div>
                         </div>
                     </div>
@@ -69,33 +75,18 @@
             </div>
 
             <!-- Древовидное представление -->
-            <div v-else class="bg-white/5 backdrop-blur-md rounded-2xl p-6 border border-white/10">
+            <div v-else class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-white">Иерархическая схема</h2>
-                    <p class="text-sm text-white/60">Нажмите на должность, чтобы открыть подробности</p>
+                    <h2 class="text-2xl font-semibold text-[#202223]">Схема возможных переходов</h2>
+                    <p class="text-sm text-[#616161]">Нажмите на роль, чтобы открыть подробности</p>
                 </div>
 
-                <div v-if="rootNodes.length" class="mb-5 rounded-xl border border-white/10 bg-black/10 p-4">
-                    <label for="hierarchy-root" class="mb-2 block text-sm font-medium text-white/80">
-                        Ветка карьерной иерархии
-                    </label>
-                    <select
-                        id="hierarchy-root"
-                        v-model="selectedRootId"
-                        class="w-full rounded-lg border border-[#8c9196] bg-white px-3 py-2 text-[#202223] outline-none transition focus:border-[#008060] focus:ring-1 focus:ring-[#008060] sm:max-w-md"
-                    >
-                        <option v-for="root in rootNodes" :key="root.id" :value="root.id">
-                            {{ root.title }}
-                        </option>
-                    </select>
-                    <p class="mt-2 text-xs text-white/50">
-                        Схема показывает одну ветку за раз - так связи остаются читаемыми даже для большой базы должностей.
-                    </p>
-                </div>
+                <p class="mb-5 text-sm text-[#616161]">Стрелка идёт от роли с меньшим рыночным уровнем к роли с большим уровнем. Связь появляется, когда у ролей есть общие навыки.</p>
 
                 <HierarchyDiagram
                     v-if="diagramNodes.length"
                     :nodes="diagramNodes"
+                    :transitions="diagramTransitions"
                     :selected-id="selectedTreeNode?.id"
                     @select="handleTreeSelect"
                     @show-details="handleTreeShowDetails"
@@ -322,7 +313,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 
 const props = defineProps({
     categories: { type: Array, required: true },
-    groups: { type: Array, required: true }
+    groups: { type: Array, required: true },
+    transitions: { type: Array, default: () => [] },
 });
 
 const selectedCategory = ref(null);
@@ -332,7 +324,6 @@ const isLocationsExpanded = ref(false);
 const selectedGroupId = ref(null);
 const viewMode = ref('table');
 const selectedTreeNode = ref(null);
-const selectedRootId = ref(null);
 let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
@@ -372,55 +363,15 @@ const filteredOtherCategories = computed(() => {
     return otherCategories.value.filter(c => c.group_id === selectedGroupId.value);
 });
 
-const rootNodes = computed(() => {
-    const ids = new Set(filteredCategories.value.map(category => category.id));
-    return filteredCategories.value
-        .filter(category => !category.parent_id || !ids.has(category.parent_id))
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-});
-
-const diagramNodes = computed(() => {
-    const rootId = Number(selectedRootId.value);
-    if (!rootId) return [];
-
-    const children = new Map();
-    filteredCategories.value.forEach(category => {
-        const parentId = category.parent_id;
-        if (!children.has(parentId)) children.set(parentId, []);
-        children.get(parentId).push(category);
-    });
-
-    const result = [];
-    const visit = (id) => {
-        const node = filteredCategories.value.find(category => category.id === id);
-        if (!node) return;
-        result.push(node);
-        (children.get(node.id) || [])
-            .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-            .forEach(child => visit(child.id));
-    };
-    visit(rootId);
-    return result;
-});
-
-watch(rootNodes, (roots) => {
-    if (!roots.some(root => root.id === selectedRootId.value)) {
-        selectedRootId.value = roots[0]?.id ?? null;
-    }
-}, { immediate: true });
-
-const maxLevel = computed(() => {
-    const cats = filteredCategories.value;
-    if (!cats.length) return 0;
-    return Math.max(...cats.map(c => c.level));
+const marketCategories = computed(() => filteredCategories.value.filter(category => category.market_level));
+const diagramNodes = computed(() => marketCategories.value);
+const diagramTransitions = computed(() => {
+    const categoryIds = new Set(diagramNodes.value.map(category => category.id));
+    return props.transitions.filter(transition => categoryIds.has(transition.from) && categoryIds.has(transition.to));
 });
 
 const groupMap = computed(() => new Map(props.groups.map(g => [g.id, g.title])));
-const parentMap = computed(() => new Map(props.categories.map(c => [c.id, c.title])));
-
-
 const getGroupTitle = (groupId) => groupMap.value.get(groupId) || 'Неизвестно';
-const getParentTitle = (parentId) => parentMap.value.get(parentId) || null;
 const vacancyLabel = (value) => {
     const count = Number(value) || 0;
     const mod10 = count % 10;
@@ -434,12 +385,9 @@ const vacancyFoundLabel = (value) => {
     const mod100 = count % 100;
     return `${vacancyLabel(count)} ${mod10 === 1 && mod100 !== 11 ? 'найдена' : 'найдено'}`;
 };
-const getFilteredCategoriesByLevel = (level) => filteredCategories.value.filter(c => c.level === level).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-
-const getLevelLabel = (level) => {
-    const labels = ['Высшее руководство', 'Директора / Архитекторы', 'Руководители отделов', 'Ведущие специалисты', 'Специалисты', 'Младшие специалисты'];
-    return `Уровень ${level}`;
-};
+const getCategoriesByMarketLevel = (level) => marketCategories.value
+    .filter(category => Number(category.market_level) === Number(level))
+    .sort((a, b) => Number(a.market_salary_median) - Number(b.market_salary_median));
 
 const getIconForCategory = () => '';
 

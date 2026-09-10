@@ -2,6 +2,7 @@
 
 namespace App\Services\Parse;
 
+use App\Services\CareerMapService;
 use App\Services\Parse\DataProvider\SkillsDataProvider;
 use App\Services\Parse\DataProvider\VacancyDataProvider;
 use App\Services\Parse\Interfaces\ParserInterface;
@@ -9,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class Parser implements ParserInterface
 {
-    public function __construct(protected SkillsDataProvider $skillsDataProvider, protected VacancyDataProvider $vacancyDataProvider)
+    public function __construct(protected SkillsDataProvider $skillsDataProvider, protected VacancyDataProvider $vacancyDataProvider, protected CareerMapService $careerMapService)
     {
 
     }
@@ -24,6 +25,7 @@ class Parser implements ParserInterface
         DB::transaction(function () use ($skills, $vacancies) {
             $this->skillsDataProvider->persist($skills);
             $this->vacancyDataProvider->persist($vacancies);
+            $this->careerMapService->rebuild();
         }, 3);
     }
 }

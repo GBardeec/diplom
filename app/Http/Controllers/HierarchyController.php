@@ -13,7 +13,7 @@ class HierarchyController extends Controller
     {
         $categories = VacancyCategory::with(['parent'])
             ->withCount('vacancies')
-            ->orderBy('level')
+            ->orderBy('market_level')
             ->orderBy('sort_order')
             ->get()
             ->map(function ($category) {
@@ -27,6 +27,9 @@ class HierarchyController extends Controller
                     'alias' => $category->alias,
                     'description' => $category->description,
                     'level' => $category->level,
+                    'market_level' => $category->market_level,
+                    'market_salary_median' => $category->market_salary_median,
+                    'market_salary_sample_size' => $category->market_salary_sample_size,
                     'parent_id' => $category->parent_id,
                     'group_id' => $category->group_id,
                     'sort_order' => $category->sort_order,
@@ -51,9 +54,18 @@ class HierarchyController extends Controller
             ];
         });
 
+        $transitions = DB::table('career_transitions')
+            ->get(['from_category_id', 'to_category_id', 'skills_similarity'])
+            ->map(fn ($transition) => [
+                'from' => $transition->from_category_id,
+                'to' => $transition->to_category_id,
+                'similarity' => (float) $transition->skills_similarity,
+            ]);
+
         return Inertia::render('Hierarchy/Index', [
             'categories' => $categories,
             'groups' => $groups,
+            'transitions' => $transitions,
         ]);
     }
 

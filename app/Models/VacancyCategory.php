@@ -16,12 +16,18 @@ class VacancyCategory extends Model
         'description',
         'parent_id',
         'level',
+        'market_level',
+        'market_salary_median',
+        'market_salary_sample_size',
         'sort_order',
     ];
 
     protected $casts = [
         'external_id' => 'integer',
         'level' => 'integer',
+        'market_level' => 'integer',
+        'market_salary_median' => 'integer',
+        'market_salary_sample_size' => 'integer',
         'sort_order' => 'integer',
     ];
 

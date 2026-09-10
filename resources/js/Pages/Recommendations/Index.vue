@@ -26,7 +26,7 @@
 import { computed, onMounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ReportContent from '@/Components/RecommendationReport.vue';
-const props = defineProps({ skills: Array, groups: Array, categories: Array, qualifications: Array, reportUuid: String });
+const props = defineProps({ skills: Array, groups: Array, categories: Array, qualifications: Array, transitions: { type: Array, default: () => [] }, reportUuid: String });
 const step = ref(1), skillQuery = ref(''), result = ref(null), error = ref(''), formError = ref(''), loading = ref(false), copied = ref(false), uuid = ref(props.reportUuid || null);
 const form = ref({ commercial_experience: null, grade_answers: [null, null, null, null, null], skills: [], group_id: null, category_id: null });
 const readonlyReport = computed(() => Boolean(props.reportUuid || result.value?.report_uuid));
@@ -51,14 +51,27 @@ const submit = async () => { loading.value = true; error.value = ''; try { const
 const copyLink = async () => { await navigator.clipboard.writeText(result.value.report_url); copied.value = true; setTimeout(() => copied.value = false, 1500); };
 const careerPaths = computed(() => {
   const directions = result.value?.directions || [];
-  const source = directions.length ? directions.map(item => ({ group: item.group, category_id: item.roles?.[0]?.category_id })) : [{ group: 'Подходящая роль', category_id: result.value?.input_data?.category_id || result.value?.opportunities?.[0]?.category_id }];
   const categoriesById = new Map(props.categories.map(item => [item.id, item]));
-
-  return source.map(item => {
-    let node = categoriesById.get(item.category_id), nodes = [];
-    while (node) { nodes.unshift(node); node = categoriesById.get(node.parent_id); }
-    return { group: item.group, nodes };
-  }).filter(item => item.nodes.length);
+  const transitionBySource = new Map();
+  props.transitions.forEach(transition => {
+    if (!transitionBySource.has(transition.from)) transitionBySource.set(transition.from, []);
+    transitionBySource.get(transition.from).push(transition.to);
+  });
+  return directions.map(direction => {
+    const start = categoriesById.get(direction.roles?.[0]?.category_id);
+    if (!start?.market_level) return null;
+    const nodes = [start];
+    while (nodes.length < 3) {
+      const current = nodes[nodes.length - 1];
+      const next = (transitionBySource.get(current.id) || [])
+        .map(id => categoriesById.get(id))
+        .filter(node => node && node.group_id === start.group_id && Number(node.market_level) > Number(current.market_level))
+        .sort((a, b) => Number(a.market_level) - Number(b.market_level) || Number(a.market_salary_median) - Number(b.market_salary_median))[0];
+      if (!next) break;
+      nodes.push(next);
+    }
+    return { group: direction.group, nodes };
+  }).filter(item => item?.nodes.length);
 });
 onMounted(async () => { if (!uuid.value) return; try { const data = await request(`/api/recommendations/${uuid.value}`); result.value = data.data; } catch (exception) { error.value = exception.message; } });
 </script>
