@@ -38,9 +38,7 @@ import { computed, ref, watch } from 'vue';
 const props = defineProps({ result: Object, error: String, copied: Boolean });
 defineEmits(['copy']);
 const activeDirectionIndex = ref(0);
-const directions = computed(() => (props.result?.directions || [])
-  .map(direction => ({ ...direction, roles: (direction.roles || []).filter(role => Number(role.vacancies_count) >= 3) }))
-  .filter(direction => direction.roles.length));
+const directions = computed(() => props.result?.directions || []);
 const activeDirection = computed(() => directions.value[activeDirectionIndex.value] || directions.value[0] || null);
 watch(() => props.result?.report_uuid, () => { activeDirectionIndex.value = 0; });
 const formatSalary = value => new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
