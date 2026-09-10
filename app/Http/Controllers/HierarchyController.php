@@ -182,6 +182,7 @@ class HierarchyController extends Controller
                     ])->values(),
                 ];
             })
+            ->sortBy(fn (array $grade) => $this->gradeSortOrder($grade['title']))
             ->values();
 
         // Топ локации
@@ -295,4 +296,20 @@ class HierarchyController extends Controller
             'employment_stats' => $employmentStats,
             'publication_timeline' => $publicationTimeline,
         ];
-    }}
+    }
+
+    private function gradeSortOrder(string $title): int
+    {
+        $grade = mb_strtolower($title);
+
+        return match (true) {
+            str_contains($grade, 'не указано') => 0,
+            str_contains($grade, 'intern') => 1,
+            str_contains($grade, 'junior') => 2,
+            str_contains($grade, 'middle') => 3,
+            str_contains($grade, 'senior') => 4,
+            str_contains($grade, 'lead') => 5,
+            default => 6,
+        };
+    }
+}
