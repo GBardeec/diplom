@@ -332,7 +332,7 @@ class RecommendationService
                             'market_salary_median' => $sample->category->market_salary_median,
                         ];
                     })
-                    ->filter(fn (array $role) => $role['matched_skills_count'] > 0)
+                    ->filter(fn (array $role) => $role['matched_skills_count'] > 0 && $role['vacancies_count'] >= 3)
                     ->sortByDesc('matched_skills_count')
                     ->take(3)
                     ->values()

@@ -5,7 +5,7 @@
       <h1 class="mt-2 text-3xl font-semibold tracking-tight text-[#202223]">Поймите, где вы сейчас и куда расти дальше</h1>
       <p class="mt-3 max-w-3xl text-[#616161]">Сначала оценим рабочий уровень, затем учтём навыки и выбранное направление. Это займёт несколько минут.</p>
 
-      <div v-if="readonlyReport" class="mt-8"><section class="report"><ReportContent :result="result" :error="error" :career-paths="careerPaths" :copied="copied" @copy="copyLink" /></section></div>
+      <div v-if="readonlyReport" class="mt-8"><section class="report"><ReportContent :result="result" :error="error" :copied="copied" @copy="copyLink" /></section></div>
 
       <div v-else class="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <form class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm" @submit.prevent="submit">
@@ -17,7 +17,7 @@
         </form>
         <aside class="rounded-xl border border-[#e1e3e5] bg-[#f7f8f8] p-6"><p class="text-sm font-semibold text-[#008060]">Что вы получите</p><h2 class="mt-2 text-xl font-semibold">Персональный ориентир развития</h2><ul class="mt-5 space-y-4 text-sm text-[#616161]"><li><b>Текущий уровень</b><br/>по опыту и самостоятельности, а не только по навыкам.</li><li><b>Следующий шаг</b><br/>достижимая роль в выбранном направлении.</li><li><b>План развития</b><br/>навыки, которые помогут подготовиться к переходу.</li></ul></aside>
       </div>
-      <section v-if="!readonlyReport && result" class="mt-8"><ReportContent :result="result" :error="error" :career-paths="careerPaths" :copied="copied" @copy="copyLink" /></section>
+      <section v-if="!readonlyReport && result" class="mt-8"><ReportContent :result="result" :error="error" :copied="copied" @copy="copyLink" /></section>
     </main>
   </AppLayout>
 </template>
@@ -26,7 +26,7 @@
 import { computed, onMounted, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import ReportContent from '@/Components/RecommendationReport.vue';
-const props = defineProps({ skills: Array, groups: Array, categories: Array, qualifications: Array, transitions: { type: Array, default: () => [] }, reportUuid: String });
+const props = defineProps({ skills: Array, groups: Array, categories: Array, qualifications: Array, reportUuid: String });
 const step = ref(1), skillQuery = ref(''), result = ref(null), error = ref(''), formError = ref(''), loading = ref(false), copied = ref(false), uuid = ref(props.reportUuid || null);
 const form = ref({ commercial_experience: null, grade_answers: [null, null, null, null, null], skills: [], group_id: null, category_id: null });
 const readonlyReport = computed(() => Boolean(props.reportUuid || result.value?.report_uuid));
@@ -49,30 +49,6 @@ const nextStep = () => { formError.value = ''; if (step.value === 1 && (!form.va
 const request = async (url, options = {}) => { const response = await fetch(url, { headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, ...options }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'Не удалось сформировать план'); return data; };
 const submit = async () => { loading.value = true; error.value = ''; try { const data = await request('/api/recommendations', { method: 'POST', body: JSON.stringify(form.value) }); result.value = data.data; uuid.value = data.data.report_uuid; history.replaceState({}, '', `/recommendations/${uuid.value}`); } catch (exception) { error.value = exception.message; } finally { loading.value = false; } };
 const copyLink = async () => { await navigator.clipboard.writeText(result.value.report_url); copied.value = true; setTimeout(() => copied.value = false, 1500); };
-const careerPaths = computed(() => {
-  const directions = result.value?.directions || [];
-  const categoriesById = new Map(props.categories.map(item => [item.id, item]));
-  const transitionBySource = new Map();
-  props.transitions.forEach(transition => {
-    if (!transitionBySource.has(transition.from)) transitionBySource.set(transition.from, []);
-    transitionBySource.get(transition.from).push(transition.to);
-  });
-  return directions.map(direction => {
-    const start = categoriesById.get(direction.roles?.[0]?.category_id);
-    if (!start?.market_level) return null;
-    const nodes = [start];
-    while (nodes.length < 3) {
-      const current = nodes[nodes.length - 1];
-      const next = (transitionBySource.get(current.id) || [])
-        .map(id => categoriesById.get(id))
-        .filter(node => node && node.group_id === start.group_id && Number(node.market_level) > Number(current.market_level))
-        .sort((a, b) => Number(a.market_level) - Number(b.market_level) || Number(a.market_salary_median) - Number(b.market_salary_median))[0];
-      if (!next) break;
-      nodes.push(next);
-    }
-    return { group: direction.group, nodes };
-  }).filter(item => item?.nodes.length);
-});
 onMounted(async () => { if (!uuid.value) return; try { const data = await request(`/api/recommendations/${uuid.value}`); result.value = data.data; } catch (exception) { error.value = exception.message; } });
 </script>
 
