@@ -40,6 +40,7 @@ class HierarchyController extends Controller
                     'top_skills' => $stats['top_skills'],
                     'top_skills_by_grade' => $stats['top_skills_by_grade'],
                     'top_locations' => $stats['top_locations'],
+                    'top_locations_by_grade' => $stats['top_locations_by_grade'],
                 'grades_distribution' => $stats['grades_distribution'],
                 'employment_stats' => $stats['employment_stats'],
                 'publication_timeline' => $stats['publication_timeline'],
@@ -78,6 +79,7 @@ class HierarchyController extends Controller
                 'top_skills' => [],
                 'top_skills_by_grade' => [],
                 'top_locations' => [],
+                'top_locations_by_grade' => [],
                 'grades_distribution' => [],
                 'employment_stats' => [],
                 'publication_timeline' => [],
@@ -198,6 +200,35 @@ class HierarchyController extends Controller
                 return $location;
             });
 
+        $topLocationsByGrade = DB::table('vacancies')
+            ->join('qualifications', 'vacancies.qualification_id', '=', 'qualifications.id')
+            ->join('location_vacancy', 'vacancies.id', '=', 'location_vacancy.vacancy_id')
+            ->join('locations', 'location_vacancy.location_id', '=', 'locations.id')
+            ->whereIn('vacancies.id', $vacancyIds)
+            ->select('qualifications.id as grade_id', 'qualifications.title as grade_title', 'locations.id as location_id', 'locations.title', DB::raw('COUNT(*) as count'))
+            ->groupBy('qualifications.id', 'qualifications.title', 'locations.id', 'locations.title')
+            ->orderBy('count', 'desc')
+            ->get()
+            ->groupBy('grade_id')
+            ->map(function ($locations, $gradeId) use ($vacancyIds) {
+                $gradeVacanciesCount = DB::table('vacancies')
+                    ->whereIn('id', $vacancyIds)
+                    ->where('qualification_id', $gradeId)
+                    ->count();
+                return [
+                    'grade_id' => (int) $gradeId,
+                    'title' => $locations->first()->grade_title,
+                    'locations' => $locations->map(fn ($location) => [
+                        'location_id' => $location->location_id,
+                        'title' => $location->title,
+                        'count' => $location->count,
+                        'percentage' => $gradeVacanciesCount ? round($location->count / $gradeVacanciesCount * 100) : 0,
+                    ])->values(),
+                ];
+            })
+            ->sortBy(fn (array $grade) => $this->gradeSortOrder($grade['title']))
+            ->values();
+
         // Распределение по грейдам
         $gradesDistribution = DB::table('vacancies')
             ->join('qualifications', 'vacancies.qualification_id', '=', 'qualifications.id')
@@ -292,6 +323,7 @@ class HierarchyController extends Controller
             'top_skills' => $topSkills,
             'top_skills_by_grade' => $topSkillsByGrade,
             'top_locations' => $topLocations,
+            'top_locations_by_grade' => $topLocationsByGrade,
             'grades_distribution' => $gradesDistribution,
             'employment_stats' => $employmentStats,
             'publication_timeline' => $publicationTimeline,

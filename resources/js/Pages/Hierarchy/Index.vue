@@ -228,6 +228,10 @@
                                 География вакансий
                             </h3>
                             <p class="text-sm text-[#616161]">Распределение вакансий по городам.</p>
+                            <div v-if="locationGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр городов по грейду">
+                                <button type="button" :class="skillGradeButtonClass(null, selectedLocationsGradeId)" @click="selectedLocationsGradeId = null">Все вакансии</button>
+                                <button v-for="grade in locationGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedLocationsGradeId)" @click="selectedLocationsGradeId = grade.grade_id">{{ grade.title }}</button>
+                            </div>
                             <div class="space-y-3">
                                 <div
                                     v-for="location in visibleTopLocations"
@@ -327,6 +331,7 @@ const selectedGroupId = ref(null);
 const viewMode = ref('table');
 const selectedTreeNode = ref(null);
 const selectedSkillsGradeId = ref(null);
+const selectedLocationsGradeId = ref(null);
 let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
@@ -337,7 +342,11 @@ const allTopSkills = computed(() => {
     return skillGradeOptions.value.find(grade => Number(grade.grade_id) === Number(selectedSkillsGradeId.value))?.skills || [];
 });
 const visibleTopSkills = computed(() => isSkillsExpanded.value ? allTopSkills.value : allTopSkills.value.slice(0, 8));
-const allTopLocations = computed(() => selectedCategory.value?.top_locations || []);
+const locationGradeOptions = computed(() => selectedCategory.value?.top_locations_by_grade || []);
+const allTopLocations = computed(() => {
+    if (selectedLocationsGradeId.value === null) return selectedCategory.value?.top_locations || [];
+    return locationGradeOptions.value.find(grade => Number(grade.grade_id) === Number(selectedLocationsGradeId.value))?.locations || [];
+});
 const visibleTopLocations = computed(() => isLocationsExpanded.value ? allTopLocations.value : allTopLocations.value.slice(0, 8));
 const gradeSalaries = computed(() => Object.values(selectedCategory.value?.salary_stats?.by_grade || {}));
 const maxGradeSalary = computed(() => Math.max(1, ...gradeSalaries.value.map(item => item.avg || 0)));
@@ -394,9 +403,9 @@ const getCategoriesByMarketLevel = (level) => marketCategories.value
 
 const getIconForCategory = () => '';
 
-const skillGradeButtonClass = (gradeId) => [
+const skillGradeButtonClass = (gradeId, selectedGradeId = selectedSkillsGradeId.value) => [
     'rounded-md border px-3 py-1.5 text-xs font-semibold transition',
-    Number(selectedSkillsGradeId.value) === Number(gradeId) && (selectedSkillsGradeId.value !== null || gradeId === null)
+    Number(selectedGradeId) === Number(gradeId) && (selectedGradeId !== null || gradeId === null)
         ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]'
         : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]',
 ];
@@ -436,6 +445,7 @@ const showCategoryDetails = (category) => {
     isSkillsExpanded.value = false;
     isLocationsExpanded.value = false;
     selectedSkillsGradeId.value = null;
+    selectedLocationsGradeId.value = null;
     selectedCategory.value = category;
     isCategoryModalOpen.value = true;
 };
