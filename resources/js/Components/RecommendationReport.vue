@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 const props = defineProps({ result: Object, error: String, copied: Boolean });
 defineEmits(['copy']);
@@ -55,6 +55,13 @@ const optionalSkills = computed(() => activeRole.value?.skills?.filter(skill => 
 watch(() => props.result?.report_uuid, () => { activeDirectionIndex.value = 0; activeRoleId.value = null; comparisonRoleId.value = null; });
 watch(() => activeDirection.value?.group_id, () => { activeRoleId.value = null; comparisonRoleId.value = null; });
 watch(() => activeRole.value?.category_id, () => { comparisonRoleId.value = null; });
+watch(activeRole, () => nextTick(() => {
+  const link = document.querySelector('.market-link');
+  if (link) {
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+  }
+}), { immediate: true });
 const formatSalary = value => new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 const vacancyLabel = value => {
   const count = Number(value) || 0;
