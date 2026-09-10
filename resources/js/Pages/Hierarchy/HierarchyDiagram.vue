@@ -7,6 +7,7 @@
                 </defs>
                 <path v-for="arrow in layout.levelArrows" :key="arrow.from" :d="arrow.path" class="diagram-line" marker-end="url(#diagram-arrow)" />
             </svg>
+            <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }">Уровень {{ level.number }}</div>
             <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': selectedId === node.id }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @click="selectNode(node)">
                 <span class="diagram-node-title">{{ node.title }}</span>
@@ -40,18 +41,21 @@ const layout = computed(() => {
     const maxCount = Math.max(1, ...[...byLevel.values()].map(nodes => nodes.length));
     const width = Math.max(760, LEFT_PADDING * 2 + maxCount * CARD_WIDTH + Math.max(0, maxCount - 1) * NODE_GAP);
     const positioned = [];
-    [5, 4, 3, 2, 1].forEach((level, index) => {
+    [1, 2, 3, 4, 5].forEach((level, index) => {
         const nodes = (byLevel.get(level) || []).sort((a, b) => Number(a.market_salary_median) - Number(b.market_salary_median));
         const rowWidth = nodes.length * CARD_WIDTH + Math.max(0, nodes.length - 1) * NODE_GAP;
         const firstX = (width - rowWidth) / 2 + CARD_WIDTH / 2;
         const y = TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP);
         nodes.forEach((node, nodeIndex) => positioned.push({ ...node, x: firstX + nodeIndex * (CARD_WIDTH + NODE_GAP), y }));
     });
-    const levels = [5, 4, 3, 2, 1].map((number, index) => ({ number, y: TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP) }));
+    const levels = [1, 2, 3, 4, 5].map((number, index) => {
+        const y = TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP);
+        return { number, y, x: LEFT_PADDING - 10, width: width - LEFT_PADDING - 14, frameY: y - 10, height: CARD_HEIGHT + 20 };
+    });
     const levelArrows = levels.slice(0, -1).map((level, index) => {
-        const lower = levels[index + 1];
-        const x = 68;
-        return { from: lower.number, path: `M ${x} ${lower.y + 12} V ${level.y + CARD_HEIGHT - 12}` };
+        const next = levels[index + 1];
+        const x = width / 2;
+        return { from: level.number, path: `M ${x} ${level.frameY + level.height} V ${next.frameY}` };
     });
     return { width, height: TOP_PADDING + 5 * CARD_HEIGHT + 4 * LEVEL_GAP + 28, nodes: positioned, levelArrows, levels };
 });
@@ -64,6 +68,7 @@ const selectNode = node => { emit('select', node); emit('show-details', node); }
 .diagram-canvas { position: relative; margin: 0 auto; }
 .diagram-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
+.diagram-level-frame { position: absolute; z-index: 1; border: 1px solid #dfe3e0; border-radius: 14px; background: #ffffff80; }
 .diagram-level-label { position: absolute; left: 12px; z-index: 2; width: 78px; color: #6d7175; font-size: .72rem; font-weight: 700; line-height: 1.1; }
 .diagram-node { position: absolute; z-index: 3; width: 166px; height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px; border: 1px solid #d2d5d8; border-radius: 10px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.08); color: #202223; cursor: pointer; transform: translateX(-50%); transition: transform .2s, border-color .2s, box-shadow .2s; }
 .diagram-node:hover { transform: translateX(-50%) translateY(-3px); border-color: #008060; box-shadow: 0 6px 14px rgba(0,128,96,.14); }
