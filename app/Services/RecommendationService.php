@@ -321,6 +321,18 @@ class RecommendationService
                         $sample = $categoryVacancies->first();
                         $roleSkills = $categoryVacancies->flatMap->skills->unique('id');
                         $matched = $roleSkills->whereIn('id', $skillIds)->count();
+                        $roleSkillsWithFrequency = $categoryVacancies
+                            ->flatMap->skills
+                            ->groupBy('id')
+                            ->map(fn ($skills) => [
+                                'id' => $skills->first()->id,
+                                'title' => $skills->first()->title,
+                                'percent' => (int) round($skills->count() / $categoryVacancies->count() * 100),
+                            ])
+                            ->sortByDesc('percent')
+                            ->take(10)
+                            ->values()
+                            ->all();
 
                         return [
                             'category_id' => $sample->category->id,
@@ -330,6 +342,7 @@ class RecommendationService
                             'vacancies_count' => $categoryVacancies->count(),
                             'market_level' => $sample->category->market_level,
                             'market_salary_median' => $sample->category->market_salary_median,
+                            'skills' => $roleSkillsWithFrequency,
                         ];
                     })
                     ->filter(fn (array $role) => $role['matched_skills_count'] > 0)
