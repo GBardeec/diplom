@@ -10,7 +10,7 @@
                     Рыночные уровни ролей
                 </h1>
                 <p class="mt-3 text-[#616161]">
-                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. Стрелки показывают возможные переходы между ролями с похожими навыками.
+                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. Стрелки на схеме показывают общий переход от одного рыночного уровня к следующему.
                 </p>
             </div>
 
@@ -19,7 +19,7 @@
                 <div class="flex flex-col gap-3 border-b border-[#e1e3e5] pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="text-sm font-semibold text-[#202223]">Выберите направление</p>
-                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет роли, рыночные уровни и возможные переходы ниже.</p>
+                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет роли и их рыночные уровни ниже.</p>
                     </div>
                     <div class="flex w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
                         <button @click="viewMode = 'table'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'table' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Таблица</button>
@@ -81,12 +81,11 @@
                     <p class="text-sm text-[#616161]">Нажмите на роль, чтобы открыть подробности</p>
                 </div>
 
-                <p class="mb-5 text-sm text-[#616161]">Стрелка идёт от роли с меньшим рыночным уровнем к роли с большим уровнем. Связь появляется, когда у ролей есть общие навыки.</p>
+                <p class="mb-5 text-sm text-[#616161]">Стрелки показывают общий переход от уровня с меньшей медианной зарплатой к следующему уровню. Они не обозначают переход между конкретными ролями.</p>
 
                 <HierarchyDiagram
                     v-if="diagramNodes.length"
                     :nodes="diagramNodes"
-                    :transitions="diagramTransitions"
                     :selected-id="selectedTreeNode?.id"
                     @select="handleTreeSelect"
                     @show-details="handleTreeShowDetails"
@@ -314,7 +313,6 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 const props = defineProps({
     categories: { type: Array, required: true },
     groups: { type: Array, required: true },
-    transitions: { type: Array, default: () => [] },
 });
 
 const selectedCategory = ref(null);
@@ -365,10 +363,6 @@ const filteredOtherCategories = computed(() => {
 
 const marketCategories = computed(() => filteredCategories.value.filter(category => category.market_level));
 const diagramNodes = computed(() => marketCategories.value);
-const diagramTransitions = computed(() => {
-    const categoryIds = new Set(diagramNodes.value.map(category => category.id));
-    return props.transitions.filter(transition => categoryIds.has(transition.from) && categoryIds.has(transition.to));
-});
 
 const groupMap = computed(() => new Map(props.groups.map(g => [g.id, g.title])));
 const getGroupTitle = (groupId) => groupMap.value.get(groupId) || 'Неизвестно';

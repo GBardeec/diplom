@@ -5,7 +5,7 @@
                 <defs>
                     <marker id="diagram-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#008060" /></marker>
                 </defs>
-                <path v-for="edge in layout.edges" :key="`${edge.from}-${edge.to}`" :d="edge.path" class="diagram-line" marker-end="url(#diagram-arrow)" />
+                <path v-for="arrow in layout.levelArrows" :key="arrow.from" :d="arrow.path" class="diagram-line" marker-end="url(#diagram-arrow)" />
             </svg>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }">Уровень {{ level.number }}</div>
             <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': selectedId === node.id }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @click="selectNode(node)">
@@ -20,7 +20,7 @@
 <script setup>
 import { computed } from 'vue';
 
-const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null } });
+const props = defineProps({ nodes: { type: Array, required: true }, selectedId: { type: Number, default: null } });
 const emit = defineEmits(['select', 'show-details']);
 const CARD_WIDTH = 166;
 const CARD_HEIGHT = 98;
@@ -47,16 +47,13 @@ const layout = computed(() => {
         const y = TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP);
         nodes.forEach((node, nodeIndex) => positioned.push({ ...node, x: firstX + nodeIndex * (CARD_WIDTH + NODE_GAP), y }));
     });
-    const positionedById = new Map(positioned.map(node => [node.id, node]));
-    const edges = props.transitions.map(transition => ({ ...transition, source: positionedById.get(transition.from), target: positionedById.get(transition.to) }))
-        .filter(edge => edge.source && edge.target)
-        .map(edge => {
-            const startY = edge.source.y - 7;
-            const endY = edge.target.y + CARD_HEIGHT + 7;
-            const middleY = Math.round((startY + endY) / 2);
-            return { ...edge, path: `M ${edge.source.x} ${startY} V ${middleY} H ${edge.target.x} V ${endY}` };
-        });
-    return { width, height: TOP_PADDING + 5 * CARD_HEIGHT + 4 * LEVEL_GAP + 28, nodes: positioned, edges, levels: [5, 4, 3, 2, 1].map((number, index) => ({ number, y: TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP) })) };
+    const levels = [5, 4, 3, 2, 1].map((number, index) => ({ number, y: TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP) }));
+    const levelArrows = levels.slice(0, -1).map((level, index) => {
+        const lower = levels[index + 1];
+        const x = 68;
+        return { from: lower.number, path: `M ${x} ${lower.y + 12} V ${level.y + CARD_HEIGHT - 12}` };
+    });
+    return { width, height: TOP_PADDING + 5 * CARD_HEIGHT + 4 * LEVEL_GAP + 28, nodes: positioned, levelArrows, levels };
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
 const selectNode = node => { emit('select', node); emit('show-details', node); };

@@ -54,18 +54,9 @@ class HierarchyController extends Controller
             ];
         });
 
-        $transitions = DB::table('career_transitions')
-            ->get(['from_category_id', 'to_category_id', 'skills_similarity'])
-            ->map(fn ($transition) => [
-                'from' => $transition->from_category_id,
-                'to' => $transition->to_category_id,
-                'similarity' => (float) $transition->skills_similarity,
-            ]);
-
         return Inertia::render('Hierarchy/Index', [
             'categories' => $categories,
             'groups' => $groups,
-            'transitions' => $transitions,
         ]);
     }
 
