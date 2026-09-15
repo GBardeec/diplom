@@ -111,9 +111,13 @@ class HierarchyController extends Controller
                 $sourceSkills = $skillsByCategory->get($transition->from_category_id, collect());
                 $targetSkills = $skillsByCategory->get($transition->to_category_id, collect());
                 $targetVacancies = max(1, (int) ($vacancyCounts[$transition->to_category_id] ?? 0));
+                $sourceSkillTitles = $sourceSkills
+                    ->pluck('title')
+                    ->map(fn($title) => $this->normalizeSkillTitle((string) $title))
+                    ->flip();
 
                 $missingSkills = $targetSkills
-                    ->reject(fn ($skill) => $sourceSkills->has($skill->skill_id))
+                    ->reject(fn ($skill) => $sourceSkillTitles->has($this->normalizeSkillTitle($skill->title)))
                     ->sortByDesc('vacancies_count')
                     ->take(5)
                     ->map(fn ($skill) => [
@@ -124,7 +128,7 @@ class HierarchyController extends Controller
                     ->all();
 
                 $commonSkills = $targetSkills
-                    ->filter(fn ($skill) => $sourceSkills->has($skill->skill_id))
+                    ->filter(fn ($skill) => $sourceSkillTitles->has($this->normalizeSkillTitle($skill->title)))
                     ->sortByDesc('vacancies_count')
                     ->take(5)
                     ->map(fn ($skill) => [
@@ -447,6 +451,15 @@ class HierarchyController extends Controller
             str_contains($grade, 'lead') => 5,
             default => 6,
         };
+    }
+
+    private function normalizeSkillTitle(string $title): string
+    {
+        $title = mb_strtolower(trim($title));
+        $title = str_replace('1с', '1c', $title);
+        $title = preg_replace('/[^a-zа-я0-9]+/u', ' ', $title) ?? '';
+
+        return trim(preg_replace('/\s+/u', ' ', $title) ?? '');
     }
 
     private function locationSalaryAverages($vacancyIds, ?int $gradeId = null): array

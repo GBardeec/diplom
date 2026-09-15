@@ -13,9 +13,9 @@ class CareerMapService
     private const MIN_COMMON_SPECIALIST_SKILLS = 2;
     private const MIN_TARGET_SKILL_COVERAGE = 0.10;
     private const GENERIC_SKILL_TITLES = [
-        'git', 'ci/cd', 'json', 'xml', 'http', 'rest', 'sql', 'linux',
+        'git', 'ci cd', 'json', 'xml', 'http', 'rest', 'sql', 'linux',
         'docker', 'kubernetes', 'postgresql', 'mysql', 'python', 'java',
-        'java se', 'javascript', 'php', 'c#', 'c++', 'apache kafka',
+        'java se', 'javascript', 'php', 'c', 'apache kafka',
         'базы данных', 'llm', 'agile', 'scrum',
     ];
 
@@ -104,18 +104,22 @@ class CareerMapService
         $skillsByCategory = DB::table('vacancies')
             ->join('vacancy_category_vacancy', 'vacancy_category_vacancy.vacancy_id', '=', 'vacancies.id')
             ->join('skill_vacancy', 'skill_vacancy.vacancy_id', '=', 'vacancies.id')
+            ->join('skills', 'skills.id', '=', 'skill_vacancy.skill_id')
             ->where('vacancies.archived', false)
             ->where('vacancies.hidden', false)
-            ->select('vacancy_category_vacancy.vacancy_category_id as category_id', 'skill_vacancy.skill_id')
+            ->select('vacancy_category_vacancy.vacancy_category_id as category_id', 'skills.title as skill_title')
             ->distinct()
             ->get()
             ->groupBy('category_id')
-            ->map(fn(Collection $items) => $items->pluck('skill_id')->map(fn($id) => (int)$id)->all());
-
-        $skillTitles = DB::table('skills')->pluck('title', 'id');
+            ->map(fn(Collection $items) => $items->pluck('skill_title')
+                ->map(fn($title) => $this->normalizeSkillTitle((string) $title))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all());
 
         $rows = [];
-        $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, $skillTitles, &$rows) {
+        $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, &$rows) {
             // Вес навыка считается внутри направления. Это не позволяет
             // редкому, но случайному навыку из другого направления влиять
             // на результат сильнее профильных компетенций.
@@ -125,7 +129,7 @@ class CareerMapService
                 ->countBy()
                 ->map(fn(int $categoryCount) => 1 + log(($groupItems->count() + 1) / ($categoryCount + 1)));
 
-            $groupItems->each(function (array $source) use ($groupItems, $skillsByCategory, $skillTitles, $skillWeights, &$rows) {
+            $groupItems->each(function (array $source) use ($groupItems, $skillsByCategory, $skillWeights, &$rows) {
                 $sourceSkills = $skillsByCategory->get($source['id'], []);
                 if (!$sourceSkills) {
                     return;
@@ -133,10 +137,10 @@ class CareerMapService
 
                 $candidates = $groupItems
                     ->filter(fn(array $target) => $target['market_level'] > $source['market_level'])
-                    ->map(function (array $target) use ($sourceSkills, $skillsByCategory, $skillTitles, $skillWeights) {
+                    ->map(function (array $target) use ($sourceSkills, $skillsByCategory, $skillWeights) {
                         $targetSkills = $skillsByCategory->get($target['id'], []);
-                        $specialistSourceSkills = $this->specialistSkills($sourceSkills, $skillTitles);
-                        $specialistTargetSkills = $this->specialistSkills($targetSkills, $skillTitles);
+                        $specialistSourceSkills = $this->specialistSkills($sourceSkills);
+                        $specialistTargetSkills = $this->specialistSkills($targetSkills);
                         $commonSkills = array_values(array_intersect($specialistSourceSkills, $specialistTargetSkills));
                         $allSkills = array_unique(array_merge($specialistSourceSkills, $specialistTargetSkills));
                         $commonWeight = array_sum(array_map(fn($skillId) => $skillWeights->get($skillId, 1), $commonSkills));
@@ -183,11 +187,17 @@ class CareerMapService
         return $count % 2 ? $values[$middle] : ($values[$middle - 1] + $values[$middle]) / 2;
     }
 
-    private function specialistSkills(array $skillIds, Collection $skillTitles): array
+    private function specialistSkills(array $skillTitles): array
     {
-        return array_values(array_filter($skillIds, function ($skillId) use ($skillTitles) {
-            $title = mb_strtolower((string) $skillTitles->get($skillId, ''));
-            return !in_array($title, self::GENERIC_SKILL_TITLES, true);
-        }));
+        return array_values(array_filter($skillTitles, fn($title) => !in_array($title, self::GENERIC_SKILL_TITLES, true)));
+    }
+
+    private function normalizeSkillTitle(string $title): string
+    {
+        $title = mb_strtolower(trim($title));
+        $title = str_replace('1с', '1c', $title);
+        $title = preg_replace('/[^a-zа-я0-9]+/u', ' ', $title) ?? '';
+
+        return trim(preg_replace('/\s+/u', ' ', $title) ?? '');
     }
 }
