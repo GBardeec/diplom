@@ -123,11 +123,23 @@ class HierarchyController extends Controller
                     ->values()
                     ->all();
 
+                $commonSkills = $targetSkills
+                    ->filter(fn ($skill) => $sourceSkills->has($skill->skill_id))
+                    ->sortByDesc('vacancies_count')
+                    ->take(5)
+                    ->map(fn ($skill) => [
+                        'title' => $skill->title,
+                        'percent' => (int) round($skill->vacancies_count / $targetVacancies * 100),
+                    ])
+                    ->values()
+                    ->all();
+
                 return [
                     'from_category_id' => (int) $transition->from_category_id,
                     'to_category_id' => (int) $transition->to_category_id,
                     'group_id' => (int) $transition->group_id,
                     'similarity' => (int) round($transition->skills_similarity * 100),
+                    'common_skills' => $commonSkills,
                     'missing_skills' => $missingSkills,
                 ];
             })

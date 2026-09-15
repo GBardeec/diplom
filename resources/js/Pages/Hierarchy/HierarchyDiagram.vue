@@ -4,12 +4,13 @@
             <aside v-if="isHintVisible" class="diagram-hint" aria-live="polite">
                 <template v-if="activeTransitions.length">
                     <b>Переходы из роли «{{ activeNode?.title }}»</b>
-                    <p>Навыки, которые чаще встречаются в целевой роли:</p>
                     <div class="transition-list">
                         <div v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" class="transition-item">
                             <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
-                            <span v-if="transition.missing_skills.length" class="transition-skills">Добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
-                            <span v-else class="transition-skills">Базовые навыки ролей уже пересекаются.</span>
+                            <span v-if="transition.common_skills.length" class="transition-common">Уже общее: {{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
+                            <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
+                            <span v-if="transition.missing_skills.length" class="transition-skills">Стоит добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
+                            <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
                         </div>
                     </div>
                 </template>
@@ -161,6 +162,7 @@ onBeforeUnmount(clearHintTimer);
 .transition-list { display: grid; gap: 7px; margin-top: 10px; }
 .transition-item { display: grid; gap: 2px; border-left: 3px solid #008060; padding-left: 9px; }
 .transition-target { color: #202223; font-weight: 700; }
+.transition-common { color: #4a4f54; }
 .transition-skills { color: #006e52; }
 .diagram-viewport { overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
