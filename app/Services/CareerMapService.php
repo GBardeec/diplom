@@ -104,9 +104,17 @@ class CareerMapService
             ->groupBy('category_id')
             ->map(fn(Collection $items) => $items->pluck('skill_id')->map(fn($id) => (int)$id)->all());
 
+        // Редкие профильные навыки лучше описывают направление, чем общие
+        // инструменты вроде Git или SQL. Поэтому при сравнении ролей им
+        // придаётся больший вес.
+        $skillWeights = $skillsByCategory
+            ->flatten()
+            ->countBy()
+            ->map(fn(int $categoryCount) => 1 + log(($marketCategories->count() + 1) / ($categoryCount + 1)));
+
         $rows = [];
-        $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, &$rows) {
-            $groupItems->each(function (array $source) use ($groupItems, $skillsByCategory, &$rows) {
+        $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, $skillWeights, &$rows) {
+            $groupItems->each(function (array $source) use ($groupItems, $skillsByCategory, $skillWeights, &$rows) {
                 $sourceSkills = $skillsByCategory->get($source['id'], []);
                 if (!$sourceSkills) {
                     return;
@@ -114,14 +122,17 @@ class CareerMapService
 
                 $candidates = $groupItems
                     ->filter(fn(array $target) => $target['market_level'] > $source['market_level'])
-                    ->map(function (array $target) use ($sourceSkills, $skillsByCategory) {
+                    ->map(function (array $target) use ($sourceSkills, $skillsByCategory, $skillWeights) {
                         $targetSkills = $skillsByCategory->get($target['id'], []);
-                        $intersection = count(array_intersect($sourceSkills, $targetSkills));
-                        $union = count(array_unique(array_merge($sourceSkills, $targetSkills)));
-                        $target['similarity'] = $union ? $intersection / $union : 0;
+                        $commonSkills = array_intersect($sourceSkills, $targetSkills);
+                        $allSkills = array_unique(array_merge($sourceSkills, $targetSkills));
+                        $commonWeight = array_sum(array_map(fn($skillId) => $skillWeights->get($skillId, 1), $commonSkills));
+                        $allWeight = array_sum(array_map(fn($skillId) => $skillWeights->get($skillId, 1), $allSkills));
+                        $target['common_skills_count'] = count($commonSkills);
+                        $target['similarity'] = $allWeight ? $commonWeight / $allWeight : 0;
                         return $target;
                     })
-                    ->filter(fn(array $target) => $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
+                    ->filter(fn(array $target) => $target['common_skills_count'] >= 2 && $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
                     ->sortBy([
                         ['similarity', 'desc'],
                         ['market_level', 'asc'],
