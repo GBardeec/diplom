@@ -1,27 +1,5 @@
 <template>
     <div class="diagram-shell">
-        <Transition name="hint">
-            <aside v-if="isHintVisible" class="diagram-hint" aria-live="polite">
-                <template v-if="activeTransitions.length">
-                    <b>Переходы из роли «{{ activeNode?.title }}»</b>
-                    <div class="transition-list">
-                        <div v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" class="transition-item">
-                            <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
-                            <span v-if="transition.common_skills.length" class="transition-common">Уже общее: {{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
-                            <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
-                            <span v-if="transition.missing_skills.length" class="transition-skills">Стоит добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
-                            <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
-                        </div>
-                    </div>
-                </template>
-                <template v-else>
-                    <b>Как пользоваться схемой</b>
-                    <p>Наведите курсор на роль, чтобы увидеть возможные переходы и навыки для них.</p>
-                </template>
-                <button type="button" class="diagram-hint-close" aria-label="Закрыть подсказку" @click="dismissHint">×</button>
-            </aside>
-        </Transition>
-        <button type="button" class="diagram-hint-button" aria-label="Показать подсказку по схеме" @click="showHint">?</button>
         <div class="diagram-viewport">
             <div class="diagram-canvas" :style="canvasStyle">
             <svg class="diagram-lines" :viewBox="`0 0 ${layout.width} ${layout.height}`" aria-hidden="true">
@@ -35,24 +13,39 @@
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }">Уровень {{ level.number }}</div>
-            <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @mouseenter="showNodeTransitions(node.id)" @mouseleave="hideNodeTransitions" @click="selectNode(node)">
+            <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @click="selectNode(node)">
                 <span class="diagram-node-title">{{ node.title }}</span>
                 <span class="diagram-node-meta">Медиана {{ formatSalary(node.market_salary_median) }}</span>
                 <span class="diagram-node-sample">{{ node.market_salary_sample_size }} вакансий с зарплатой</span>
             </button>
             </div>
         </div>
+        <section v-if="activeNode" class="diagram-inspector" aria-live="polite">
+            <div class="diagram-inspector-header">
+                <div><p class="diagram-inspector-label">Выбрана роль</p><h3>{{ activeNode.title }}</h3></div>
+                <button type="button" class="diagram-details-button" @click="emit('show-details', activeNode)">Подробнее о роли</button>
+            </div>
+            <div v-if="activeTransitions.length" class="transition-list">
+                <button v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectTarget(transition.to_category_id)">
+                    <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
+                    <span v-if="transition.common_skills.length" class="transition-common">Уже общее: {{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
+                    <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
+                    <span v-if="transition.missing_skills.length" class="transition-skills">Стоит добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
+                    <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
+                    <span class="transition-open">Посмотреть переходы из этой роли</span>
+                </button>
+            </div>
+            <p v-else class="diagram-no-transitions">Для этой роли в текущих данных не найдено достаточно надёжных переходов выше по рынку.</p>
+        </section>
+        <p v-else class="diagram-select-hint">Выберите роль на схеме, чтобы увидеть возможные переходы и навыки для них.</p>
     </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed } from 'vue';
 
 const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null } });
 const emit = defineEmits(['select', 'show-details']);
-const hoveredId = ref(null);
-const isHintVisible = ref(true);
-let hintTimer = null;
 const CARD_WIDTH = 166;
 const CARD_HEIGHT = 98;
 const NODE_GAP = 32;
@@ -61,7 +54,7 @@ const LEFT_PADDING = 106;
 const TOP_PADDING = 28;
 const formatSalary = value => new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 const nodeById = computed(() => new Map(props.nodes.map(node => [node.id, node])));
-const activeNodeId = computed(() => hoveredId.value ?? props.selectedId);
+const activeNodeId = computed(() => props.selectedId);
 const activeNode = computed(() => nodeById.value.get(activeNodeId.value) || null);
 const activeTransitions = computed(() => props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value)));
 const transitionTargetIds = computed(() => new Set(activeTransitions.value.map(transition => transition.to_category_id)));
@@ -115,55 +108,30 @@ const layout = computed(() => {
     return { width, height: TOP_PADDING + maxLevel * CARD_HEIGHT + Math.max(0, maxLevel - 1) * LEVEL_GAP + 28, nodes: positioned, levelArrows, transitionArrows, levels };
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
-const selectNode = node => { emit('select', node); emit('show-details', node); };
-const clearHintTimer = () => {
-    if (hintTimer) clearTimeout(hintTimer);
-    hintTimer = null;
+const selectNode = node => emit('select', node);
+const selectTarget = targetId => {
+    const node = nodeById.value.get(targetId);
+    if (node) emit('select', node);
 };
-const dismissHint = () => {
-    clearHintTimer();
-    isHintVisible.value = false;
-};
-const scheduleHintDismiss = (delay = 5000) => {
-    clearHintTimer();
-    hintTimer = setTimeout(() => {
-        isHintVisible.value = false;
-        hintTimer = null;
-    }, delay);
-};
-const showHint = () => {
-    isHintVisible.value = true;
-    scheduleHintDismiss(7000);
-};
-const showNodeTransitions = id => {
-    hoveredId.value = id;
-    isHintVisible.value = true;
-    clearHintTimer();
-};
-const hideNodeTransitions = () => {
-    hoveredId.value = null;
-    scheduleHintDismiss(900);
-};
-onMounted(() => scheduleHintDismiss());
-onBeforeUnmount(clearHintTimer);
 </script>
 
 <style scoped>
 .diagram-shell { position: relative; }
-.diagram-hint { position: absolute; z-index: 10; top: 14px; right: 14px; width: min(360px, calc(100% - 72px)); max-height: calc(100% - 28px); overflow: auto; border: 1px solid #b7d9ca; border-radius: 10px; background: rgba(255, 255, 255, .97); box-shadow: 0 8px 22px rgba(32, 34, 35, .14); padding: 12px 32px 12px 14px; color: #4a4f54; font-size: .82rem; line-height: 1.45; }
-.diagram-hint b { color: #202223; font-size: .9rem; }
-.diagram-hint p { margin-top: 3px; }
-.diagram-hint-close { position: absolute; top: 6px; right: 8px; color: #6d7175; font-size: 1.25rem; line-height: 1; }
-.diagram-hint-close:hover { color: #202223; }
-.diagram-hint-button { position: absolute; z-index: 9; top: 14px; right: 14px; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #b7d9ca; border-radius: 999px; background: #fff; color: #006e52; font-size: .9rem; font-weight: 700; box-shadow: 0 2px 5px rgba(32, 34, 35, .1); }
-.diagram-hint-button:hover { border-color: #008060; background: #f1f8f5; }
-.hint-enter-active, .hint-leave-active { transition: opacity .16s ease, transform .16s ease; }
-.hint-enter-from, .hint-leave-to { opacity: 0; transform: translateY(-4px); }
 .transition-list { display: grid; gap: 7px; margin-top: 10px; }
-.transition-item { display: grid; gap: 2px; border-left: 3px solid #008060; padding-left: 9px; }
+.transition-item { display: grid; width: 100%; gap: 3px; border: 1px solid #dfe3e0; border-left: 3px solid #008060; border-radius: 8px; background: #fff; padding: 10px 12px; text-align: left; }
+.transition-item:hover { border-color: #008060; background: #f1f8f5; }
 .transition-target { color: #202223; font-weight: 700; }
 .transition-common { color: #4a4f54; }
 .transition-skills { color: #006e52; }
+.transition-open { margin-top: 2px; color: #006e52; font-size: .76rem; font-weight: 700; }
+.diagram-inspector { margin-top: 14px; border: 1px solid #dfe3e0; border-radius: 12px; background: #f7f8f8; padding: 14px; }
+.diagram-inspector-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.diagram-inspector-label { color: #6d7175; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.diagram-inspector h3 { margin-top: 2px; color: #202223; font-size: 1rem; font-weight: 700; }
+.diagram-details-button { flex: none; border: 1px solid #008060; border-radius: 7px; background: #fff; padding: 8px 10px; color: #006e52; font-size: .8rem; font-weight: 700; }
+.diagram-details-button:hover { background: #e3f1df; }
+.diagram-no-transitions, .diagram-select-hint { margin-top: 10px; color: #616161; font-size: .88rem; }
+.diagram-select-hint { margin: 14px 0 0; border: 1px dashed #c9cccf; border-radius: 10px; padding: 10px 12px; }
 .diagram-viewport { overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
 .diagram-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
@@ -179,4 +147,5 @@ onBeforeUnmount(clearHintTimer);
 .diagram-node-title { display: -webkit-box; overflow: hidden; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.15; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .diagram-node-meta { color: #006e52; font-size: .72rem; font-weight: 700; }
 .diagram-node-sample { color: #6d7175; font-size: .67rem; }
+@media (max-width: 640px) { .diagram-inspector-header { align-items: flex-start; flex-direction: column; } .diagram-details-button { width: 100%; } }
 </style>

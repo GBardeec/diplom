@@ -75,10 +75,8 @@
             <div v-else class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                 <div class="flex justify-between items-center mb-6">
                     <h2 class="text-2xl font-semibold text-[#202223]">Схема возможных переходов</h2>
-                    <p class="text-sm text-[#616161]">Нажмите на роль, чтобы открыть подробности</p>
+                    <p class="text-sm text-[#616161]">Выберите роль, чтобы посмотреть переходы</p>
                 </div>
-
-                <p class="mb-5 text-sm text-[#616161]">Наведите курсор на роль, чтобы увидеть переходы в похожие роли с более высоким рыночным уровнем и навыки, которые стоит добавить.</p>
 
                 <HierarchyDiagram
                     v-if="diagramNodes.length"
