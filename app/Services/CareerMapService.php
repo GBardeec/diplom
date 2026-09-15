@@ -10,6 +10,14 @@ class CareerMapService
 {
     private const MIN_SALARY_SAMPLE = 3;
     private const MIN_SKILLS_SIMILARITY = 0.10;
+    private const MIN_COMMON_SPECIALIST_SKILLS = 3;
+    private const MIN_TARGET_SKILL_COVERAGE = 0.15;
+    private const GENERIC_SKILL_TITLES = [
+        'git', 'ci/cd', 'json', 'xml', 'http', 'rest', 'sql', 'linux',
+        'docker', 'kubernetes', 'postgresql', 'mysql', 'python', 'java',
+        'java se', 'javascript', 'php', 'c#', 'c++', 'apache kafka',
+        'базы данных', 'llm', 'agile', 'scrum',
+    ];
 
     /**
      * Rebuilds the market career map from the active vacancy data.
@@ -104,17 +112,20 @@ class CareerMapService
             ->groupBy('category_id')
             ->map(fn(Collection $items) => $items->pluck('skill_id')->map(fn($id) => (int)$id)->all());
 
-        // Редкие профильные навыки лучше описывают направление, чем общие
-        // инструменты вроде Git или SQL. Поэтому при сравнении ролей им
-        // придаётся больший вес.
-        $skillWeights = $skillsByCategory
-            ->flatten()
-            ->countBy()
-            ->map(fn(int $categoryCount) => 1 + log(($marketCategories->count() + 1) / ($categoryCount + 1)));
+        $skillTitles = DB::table('skills')->pluck('title', 'id');
 
         $rows = [];
-        $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, $skillWeights, &$rows) {
-            $groupItems->each(function (array $source) use ($groupItems, $skillsByCategory, $skillWeights, &$rows) {
+        $marketCategories->groupBy('group_id')->each(function (Collection $groupItems) use ($skillsByCategory, $skillTitles, &$rows) {
+            // Вес навыка считается внутри направления. Это не позволяет
+            // редкому, но случайному навыку из другого направления влиять
+            // на результат сильнее профильных компетенций.
+            $skillWeights = $groupItems
+                ->pluck('id')
+                ->flatMap(fn($categoryId) => $skillsByCategory->get($categoryId, []))
+                ->countBy()
+                ->map(fn(int $categoryCount) => 1 + log(($groupItems->count() + 1) / ($categoryCount + 1)));
+
+            $groupItems->each(function (array $source) use ($groupItems, $skillsByCategory, $skillTitles, $skillWeights, &$rows) {
                 $sourceSkills = $skillsByCategory->get($source['id'], []);
                 if (!$sourceSkills) {
                     return;
@@ -122,17 +133,24 @@ class CareerMapService
 
                 $candidates = $groupItems
                     ->filter(fn(array $target) => $target['market_level'] > $source['market_level'])
-                    ->map(function (array $target) use ($sourceSkills, $skillsByCategory, $skillWeights) {
+                    ->map(function (array $target) use ($sourceSkills, $skillsByCategory, $skillTitles, $skillWeights) {
                         $targetSkills = $skillsByCategory->get($target['id'], []);
-                        $commonSkills = array_intersect($sourceSkills, $targetSkills);
-                        $allSkills = array_unique(array_merge($sourceSkills, $targetSkills));
+                        $specialistSourceSkills = $this->specialistSkills($sourceSkills, $skillTitles);
+                        $specialistTargetSkills = $this->specialistSkills($targetSkills, $skillTitles);
+                        $commonSkills = array_values(array_intersect($specialistSourceSkills, $specialistTargetSkills));
+                        $allSkills = array_unique(array_merge($specialistSourceSkills, $specialistTargetSkills));
                         $commonWeight = array_sum(array_map(fn($skillId) => $skillWeights->get($skillId, 1), $commonSkills));
                         $allWeight = array_sum(array_map(fn($skillId) => $skillWeights->get($skillId, 1), $allSkills));
+                        $weightedSimilarity = $allWeight ? $commonWeight / $allWeight : 0;
+                        $targetCoverage = count($specialistTargetSkills) ? count($commonSkills) / count($specialistTargetSkills) : 0;
                         $target['common_skills_count'] = count($commonSkills);
-                        $target['similarity'] = $allWeight ? $commonWeight / $allWeight : 0;
+                        $target['target_coverage'] = $targetCoverage;
+                        $target['similarity'] = $weightedSimilarity * 0.65 + $targetCoverage * 0.35;
                         return $target;
                     })
-                    ->filter(fn(array $target) => $target['common_skills_count'] >= 2 && $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
+                    ->filter(fn(array $target) => $target['common_skills_count'] >= self::MIN_COMMON_SPECIALIST_SKILLS
+                        && $target['target_coverage'] >= self::MIN_TARGET_SKILL_COVERAGE
+                        && $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
                     ->sortBy([
                         ['similarity', 'desc'],
                         ['market_level', 'asc'],
@@ -163,5 +181,13 @@ class CareerMapService
         $middle = intdiv($count, 2);
 
         return $count % 2 ? $values[$middle] : ($values[$middle - 1] + $values[$middle]) / 2;
+    }
+
+    private function specialistSkills(array $skillIds, Collection $skillTitles): array
+    {
+        return array_values(array_filter($skillIds, function ($skillId) use ($skillTitles) {
+            $title = mb_strtolower((string) $skillTitles->get($skillId, ''));
+            return !in_array($title, self::GENERIC_SKILL_TITLES, true);
+        }));
     }
 }
