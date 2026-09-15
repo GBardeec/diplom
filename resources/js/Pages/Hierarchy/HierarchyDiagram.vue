@@ -1,20 +1,28 @@
 <template>
-    <div class="diagram-transition-help">
-        <template v-if="activeTransitions.length">
-            <b>Переходы из роли «{{ activeNode?.title }}»</b>
-            <p>Стрелки ведут к ролям с более высоким рыночным уровнем. Ниже показаны навыки, которые чаще встречаются в целевой роли.</p>
-            <div class="transition-list">
-                <div v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" class="transition-item">
-                    <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
-                    <span v-if="transition.missing_skills.length" class="transition-skills">Добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
-                    <span v-else class="transition-skills">Базовые навыки ролей уже пересекаются.</span>
-                </div>
-            </div>
-        </template>
-        <p v-else>Наведите курсор на роль, чтобы увидеть возможные переходы и навыки для них.</p>
-    </div>
-    <div class="diagram-viewport">
-        <div class="diagram-canvas" :style="canvasStyle">
+    <div class="diagram-shell">
+        <Transition name="hint">
+            <aside v-if="isHintVisible" class="diagram-hint" aria-live="polite">
+                <template v-if="activeTransitions.length">
+                    <b>Переходы из роли «{{ activeNode?.title }}»</b>
+                    <p>Навыки, которые чаще встречаются в целевой роли:</p>
+                    <div class="transition-list">
+                        <div v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" class="transition-item">
+                            <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
+                            <span v-if="transition.missing_skills.length" class="transition-skills">Добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
+                            <span v-else class="transition-skills">Базовые навыки ролей уже пересекаются.</span>
+                        </div>
+                    </div>
+                </template>
+                <template v-else>
+                    <b>Как пользоваться схемой</b>
+                    <p>Наведите курсор на роль, чтобы увидеть возможные переходы и навыки для них.</p>
+                </template>
+                <button type="button" class="diagram-hint-close" aria-label="Закрыть подсказку" @click="dismissHint">×</button>
+            </aside>
+        </Transition>
+        <button type="button" class="diagram-hint-button" aria-label="Показать подсказку по схеме" @click="showHint">?</button>
+        <div class="diagram-viewport">
+            <div class="diagram-canvas" :style="canvasStyle">
             <svg class="diagram-lines" :viewBox="`0 0 ${layout.width} ${layout.height}`" aria-hidden="true">
                 <defs>
                     <marker id="diagram-arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#008060" /></marker>
@@ -26,21 +34,24 @@
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }">Уровень {{ level.number }}</div>
-            <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @mouseenter="hoveredId = node.id" @mouseleave="hoveredId = null" @click="selectNode(node)">
+            <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @mouseenter="showNodeTransitions(node.id)" @mouseleave="hideNodeTransitions" @click="selectNode(node)">
                 <span class="diagram-node-title">{{ node.title }}</span>
                 <span class="diagram-node-meta">Медиана {{ formatSalary(node.market_salary_median) }}</span>
                 <span class="diagram-node-sample">{{ node.market_salary_sample_size }} вакансий с зарплатой</span>
             </button>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null } });
 const emit = defineEmits(['select', 'show-details']);
 const hoveredId = ref(null);
+const isHintVisible = ref(true);
+let hintTimer = null;
 const CARD_WIDTH = 166;
 const CARD_HEIGHT = 98;
 const NODE_GAP = 32;
@@ -104,12 +115,49 @@ const layout = computed(() => {
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
 const selectNode = node => { emit('select', node); emit('show-details', node); };
+const clearHintTimer = () => {
+    if (hintTimer) clearTimeout(hintTimer);
+    hintTimer = null;
+};
+const dismissHint = () => {
+    clearHintTimer();
+    isHintVisible.value = false;
+};
+const scheduleHintDismiss = (delay = 5000) => {
+    clearHintTimer();
+    hintTimer = setTimeout(() => {
+        isHintVisible.value = false;
+        hintTimer = null;
+    }, delay);
+};
+const showHint = () => {
+    isHintVisible.value = true;
+    scheduleHintDismiss(7000);
+};
+const showNodeTransitions = id => {
+    hoveredId.value = id;
+    isHintVisible.value = true;
+    clearHintTimer();
+};
+const hideNodeTransitions = () => {
+    hoveredId.value = null;
+    scheduleHintDismiss(900);
+};
+onMounted(() => scheduleHintDismiss());
+onBeforeUnmount(clearHintTimer);
 </script>
 
 <style scoped>
-.diagram-transition-help { min-height: 136px; margin-bottom: 14px; overflow: auto; border: 1px solid #dfe3e0; border-radius: 10px; background: #f7f8f8; padding: 12px 14px; color: #4a4f54; font-size: .82rem; line-height: 1.45; }
-.diagram-transition-help b { color: #202223; font-size: .9rem; }
-.diagram-transition-help p { margin-top: 3px; }
+.diagram-shell { position: relative; }
+.diagram-hint { position: absolute; z-index: 10; top: 14px; right: 14px; width: min(360px, calc(100% - 72px)); max-height: calc(100% - 28px); overflow: auto; border: 1px solid #b7d9ca; border-radius: 10px; background: rgba(255, 255, 255, .97); box-shadow: 0 8px 22px rgba(32, 34, 35, .14); padding: 12px 32px 12px 14px; color: #4a4f54; font-size: .82rem; line-height: 1.45; }
+.diagram-hint b { color: #202223; font-size: .9rem; }
+.diagram-hint p { margin-top: 3px; }
+.diagram-hint-close { position: absolute; top: 6px; right: 8px; color: #6d7175; font-size: 1.25rem; line-height: 1; }
+.diagram-hint-close:hover { color: #202223; }
+.diagram-hint-button { position: absolute; z-index: 9; top: 14px; right: 14px; display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #b7d9ca; border-radius: 999px; background: #fff; color: #006e52; font-size: .9rem; font-weight: 700; box-shadow: 0 2px 5px rgba(32, 34, 35, .1); }
+.diagram-hint-button:hover { border-color: #008060; background: #f1f8f5; }
+.hint-enter-active, .hint-leave-active { transition: opacity .16s ease, transform .16s ease; }
+.hint-enter-from, .hint-leave-to { opacity: 0; transform: translateY(-4px); }
 .transition-list { display: grid; gap: 7px; margin-top: 10px; }
 .transition-item { display: grid; gap: 2px; border-left: 3px solid #008060; padding-left: 9px; }
 .transition-target { color: #202223; font-weight: 700; }
