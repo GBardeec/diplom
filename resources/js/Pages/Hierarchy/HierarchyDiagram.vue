@@ -137,7 +137,8 @@ const clearSelection = () => emit('select', null);
 .diagram-inspector-close { display: grid; width: 30px; height: 30px; place-items: center; color: #6d7175; font-size: 1.3rem; line-height: 1; }
 .diagram-inspector-close:hover { color: #202223; }
 .diagram-no-transitions { margin-top: 10px; color: #616161; font-size: .88rem; }
-.diagram-viewport { overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
+.diagram-shell { min-width: 0; max-width: 100%; }
+.diagram-viewport { max-width: 100%; overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
 .diagram-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
@@ -152,5 +153,5 @@ const clearSelection = () => emit('select', null);
 .diagram-node-title { display: -webkit-box; overflow: hidden; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.15; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .diagram-node-meta { color: #006e52; font-size: .72rem; font-weight: 700; }
 .diagram-node-sample { color: #6d7175; font-size: .67rem; }
-@media (max-width: 640px) { .diagram-inspector { right: 12px; bottom: 12px; width: calc(100vw - 24px); max-height: min(68vh, 500px); } .diagram-inspector-header { align-items: flex-start; flex-direction: column; } .diagram-inspector-actions { width: 100%; } .diagram-details-button { flex: 1; } }
+@media (max-width: 640px) { .diagram-inspector { right: 12px; bottom: 12px; left: 12px; width: auto; max-height: min(68vh, 500px); } .diagram-inspector-header { align-items: flex-start; flex-direction: column; } .diagram-inspector-actions { width: 100%; } .diagram-details-button { flex: 1; } }
 </style>
