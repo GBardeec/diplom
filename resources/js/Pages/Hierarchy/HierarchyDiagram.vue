@@ -23,7 +23,10 @@
         <section v-if="activeNode" class="diagram-inspector" aria-live="polite">
             <div class="diagram-inspector-header">
                 <div><p class="diagram-inspector-label">Выбрана роль</p><h3>{{ activeNode.title }}</h3></div>
-                <button type="button" class="diagram-details-button" @click="emit('show-details', activeNode)">Подробнее о роли</button>
+                <div class="diagram-inspector-actions">
+                    <button type="button" class="diagram-details-button" @click="emit('show-details', activeNode)">Подробнее о роли</button>
+                    <button type="button" class="diagram-inspector-close" aria-label="Закрыть переходы" @click="clearSelection">×</button>
+                </div>
             </div>
             <div v-if="activeTransitions.length" class="transition-list">
                 <button v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectTarget(transition.to_category_id)">
@@ -37,7 +40,6 @@
             </div>
             <p v-else class="diagram-no-transitions">Для этой роли в текущих данных не найдено достаточно надёжных переходов выше по рынку.</p>
         </section>
-        <p v-else class="diagram-select-hint">Выберите роль на схеме, чтобы увидеть возможные переходы и навыки для них.</p>
     </div>
 </template>
 
@@ -113,6 +115,7 @@ const selectTarget = targetId => {
     const node = nodeById.value.get(targetId);
     if (node) emit('select', node);
 };
+const clearSelection = () => emit('select', null);
 </script>
 
 <style scoped>
@@ -124,14 +127,16 @@ const selectTarget = targetId => {
 .transition-common { color: #4a4f54; }
 .transition-skills { color: #006e52; }
 .transition-open { margin-top: 2px; color: #006e52; font-size: .76rem; font-weight: 700; }
-.diagram-inspector { margin-top: 14px; border: 1px solid #dfe3e0; border-radius: 12px; background: #f7f8f8; padding: 14px; }
+.diagram-inspector { position: fixed; z-index: 40; right: 20px; bottom: 20px; width: min(390px, calc(100vw - 40px)); max-height: min(460px, calc(100vh - 40px)); overflow: auto; border: 1px solid #dfe3e0; border-radius: 12px; background: rgba(255, 255, 255, .98); box-shadow: 0 12px 32px rgba(32, 34, 35, .2); padding: 14px; }
 .diagram-inspector-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .diagram-inspector-label { color: #6d7175; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .diagram-inspector h3 { margin-top: 2px; color: #202223; font-size: 1rem; font-weight: 700; }
 .diagram-details-button { flex: none; border: 1px solid #008060; border-radius: 7px; background: #fff; padding: 8px 10px; color: #006e52; font-size: .8rem; font-weight: 700; }
 .diagram-details-button:hover { background: #e3f1df; }
-.diagram-no-transitions, .diagram-select-hint { margin-top: 10px; color: #616161; font-size: .88rem; }
-.diagram-select-hint { margin: 14px 0 0; border: 1px dashed #c9cccf; border-radius: 10px; padding: 10px 12px; }
+.diagram-inspector-actions { display: flex; align-items: center; gap: 8px; }
+.diagram-inspector-close { display: grid; width: 30px; height: 30px; place-items: center; color: #6d7175; font-size: 1.3rem; line-height: 1; }
+.diagram-inspector-close:hover { color: #202223; }
+.diagram-no-transitions { margin-top: 10px; color: #616161; font-size: .88rem; }
 .diagram-viewport { overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
 .diagram-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
@@ -147,5 +152,5 @@ const selectTarget = targetId => {
 .diagram-node-title { display: -webkit-box; overflow: hidden; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.15; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .diagram-node-meta { color: #006e52; font-size: .72rem; font-weight: 700; }
 .diagram-node-sample { color: #6d7175; font-size: .67rem; }
-@media (max-width: 640px) { .diagram-inspector-header { align-items: flex-start; flex-direction: column; } .diagram-details-button { width: 100%; } }
+@media (max-width: 640px) { .diagram-inspector { right: 12px; bottom: 12px; width: calc(100vw - 24px); max-height: min(68vh, 500px); } .diagram-inspector-header { align-items: flex-start; flex-direction: column; } .diagram-inspector-actions { width: 100%; } .diagram-details-button { flex: 1; } }
 </style>
