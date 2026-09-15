@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class CareerMapService
 {
     private const MIN_SALARY_SAMPLE = 3;
-    private const MIN_SKILLS_SIMILARITY = 0.20;
+    private const MIN_SKILLS_SIMILARITY = 0.10;
 
     /**
      * Rebuilds the market career map from the active vacancy data.
@@ -113,7 +113,7 @@ class CareerMapService
                 }
 
                 $candidates = $groupItems
-                    ->filter(fn(array $target) => $target['market_level'] === $source['market_level'] + 1)
+                    ->filter(fn(array $target) => $target['market_level'] > $source['market_level'])
                     ->map(function (array $target) use ($sourceSkills, $skillsByCategory) {
                         $targetSkills = $skillsByCategory->get($target['id'], []);
                         $intersection = count(array_intersect($sourceSkills, $targetSkills));
@@ -123,8 +123,8 @@ class CareerMapService
                     })
                     ->filter(fn(array $target) => $target['similarity'] >= self::MIN_SKILLS_SIMILARITY)
                     ->sortBy([
-                        ['market_level', 'asc'],
                         ['similarity', 'desc'],
+                        ['market_level', 'asc'],
                         ['market_salary_median', 'asc'],
                     ])
                     ->take(2);

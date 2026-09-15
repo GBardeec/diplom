@@ -2,7 +2,7 @@
     <div class="diagram-transition-help">
         <template v-if="activeTransitions.length">
             <b>Переходы из роли «{{ activeNode?.title }}»</b>
-            <p>Стрелки ведут к ролям следующего рыночного уровня. Ниже показаны навыки, которые чаще встречаются в целевой роли.</p>
+            <p>Стрелки ведут к ролям с более высоким рыночным уровнем. Ниже показаны навыки, которые чаще встречаются в целевой роли.</p>
             <div class="transition-list">
                 <div v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" class="transition-item">
                     <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
@@ -51,7 +51,7 @@ const formatSalary = value => new Intl.NumberFormat('ru-RU').format(value) + ' �
 const nodeById = computed(() => new Map(props.nodes.map(node => [node.id, node])));
 const activeNodeId = computed(() => hoveredId.value ?? props.selectedId);
 const activeNode = computed(() => nodeById.value.get(activeNodeId.value) || null);
-const activeTransitions = computed(() => props.transitions.filter(transition => transition.from_category_id === activeNodeId.value));
+const activeTransitions = computed(() => props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value)));
 const transitionTargetIds = computed(() => new Set(activeTransitions.value.map(transition => transition.to_category_id)));
 
 const layout = computed(() => {
@@ -89,8 +89,16 @@ const layout = computed(() => {
         if (!source || !target) return null;
         const sourceY = source.y + CARD_HEIGHT;
         const targetY = target.y;
-        const middleY = sourceY + (targetY - sourceY) / 2;
-        return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${middleY} H ${target.x} V ${targetY}` };
+        const levelDistance = Number(target.market_level) - Number(source.market_level);
+        if (levelDistance === 1) {
+            const middleY = sourceY + (targetY - sourceY) / 2;
+            return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${middleY} H ${target.x} V ${targetY}` };
+        }
+
+        const laneX = width - 26;
+        const sourceExitY = sourceY + 16;
+        const targetEntryY = targetY - 16;
+        return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${sourceExitY} H ${laneX} V ${targetEntryY} H ${target.x} V ${targetY}` };
     }).filter(Boolean);
     return { width, height: TOP_PADDING + maxLevel * CARD_HEIGHT + Math.max(0, maxLevel - 1) * LEVEL_GAP + 28, nodes: positioned, levelArrows, transitionArrows, levels };
 });
@@ -99,7 +107,7 @@ const selectNode = node => { emit('select', node); emit('show-details', node); }
 </script>
 
 <style scoped>
-.diagram-transition-help { margin-bottom: 14px; border: 1px solid #dfe3e0; border-radius: 10px; background: #f7f8f8; padding: 12px 14px; color: #4a4f54; font-size: .82rem; line-height: 1.45; }
+.diagram-transition-help { min-height: 136px; margin-bottom: 14px; overflow: auto; border: 1px solid #dfe3e0; border-radius: 10px; background: #f7f8f8; padding: 12px 14px; color: #4a4f54; font-size: .82rem; line-height: 1.45; }
 .diagram-transition-help b { color: #202223; font-size: .9rem; }
 .diagram-transition-help p { margin-top: 3px; }
 .transition-list { display: grid; gap: 7px; margin-top: 10px; }
