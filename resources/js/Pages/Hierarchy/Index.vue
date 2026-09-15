@@ -10,7 +10,7 @@
                     Рыночные уровни ролей
                 </h1>
                 <p class="mt-3 text-[#616161]">
-                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. Стрелки на схеме показывают общий переход от одного рыночного уровня к следующему.
+                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. На схеме можно посмотреть переходы между ролями с похожими навыками.
                 </p>
             </div>
 
@@ -78,11 +78,12 @@
                     <p class="text-sm text-[#616161]">Нажмите на роль, чтобы открыть подробности</p>
                 </div>
 
-                <p class="mb-5 text-sm text-[#616161]">Стрелки показывают общий переход от уровня с меньшей медианной зарплатой к следующему уровню. Они не обозначают переход между конкретными ролями.</p>
+                <p class="mb-5 text-sm text-[#616161]">Наведите курсор на роль, чтобы увидеть переходы в похожие роли следующего уровня и навыки, которые стоит добавить.</p>
 
                 <HierarchyDiagram
                     v-if="diagramNodes.length"
                     :nodes="diagramNodes"
+                    :transitions="diagramTransitions"
                     :selected-id="selectedTreeNode?.id"
                     @select="handleTreeSelect"
                     @show-details="handleTreeShowDetails"
@@ -94,12 +95,13 @@
             <Modal :show="isCategoryModalOpen" @close="closeModal" max-width="2xl">
                 <div class="rounded-lg bg-white text-[#202223]">
                     <!-- Заголовок -->
-                    <div class="p-6 pb-4 border-b border-white/10">
+                    <div class="border-b border-[#e1e3e5] p-4">
                         <div class="flex justify-between items-start">
                             <div class="flex items-center gap-3">
                                 <div>
-                                    <h2 class="text-2xl font-bold text-white">{{ selectedCategory?.title }}</h2>
-                                    <p class="text-purple-300 text-sm">{{ getGroupTitle(selectedCategory?.group_id) }}</p>
+                                    <h2 class="text-xl font-semibold text-[#202223]">{{ selectedCategory?.title }}</h2>
+                                    <p class="text-sm text-[#616161]">{{ getGroupTitle(selectedCategory?.group_id) }}</p>
+                                    <p class="mt-1 max-w-xl text-sm text-[#616161]">{{ selectedCategory?.description || 'Нет описания' }}</p>
                                 </div>
                             </div>
                             <button @click="closeModal" class="text-[#6d7175] hover:text-[#202223] text-2xl transition" aria-label="Закрыть">×</button>
@@ -107,34 +109,20 @@
                     </div>
 
                     <!-- Контент с прокруткой -->
-                    <div class="overflow-y-auto p-6 space-y-6" style="max-height: calc(90vh - 120px);">
-                        <!-- Описание -->
-                        <div class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4">
-                            <p class="text-white/80">{{ selectedCategory?.description || 'Нет описания' }}</p>
-                        </div>
-
+                    <div class="space-y-4 overflow-y-auto p-4" style="max-height: calc(90vh - 120px);">
                         <!-- Общая статистика -->
-                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            <div class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4 text-center">
-                                <div class="text-xs mb-2 uppercase tracking-wide text-[#6d7175]">Данные</div>
-                                <div class="text-2xl font-bold text-white">
-                                    {{ selectedCategory?.vacancies_count || 0 }}
-                                </div>
-                                <div class="text-sm text-white">Всего вакансий</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="rounded-lg border border-[#e1e3e5] bg-[#f6f6f7] px-3 py-2 text-center">
+                                <div class="text-lg font-semibold text-[#202223]">{{ selectedCategory?.vacancies_count || 0 }}</div>
+                                <div class="text-xs text-[#6d7175]">вакансий</div>
                             </div>
-                            <div class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4 text-center">
-                                <div class="text-xs mb-2 uppercase tracking-wide text-[#6d7175]">Охват</div>
-                                <div class="text-2xl font-bold text-white">
-                                    {{ selectedCategory?.locations_count || 0 }}
-                                </div>
-                                <div class="text-sm text-white">Городов</div>
+                            <div class="rounded-lg border border-[#e1e3e5] bg-[#f6f6f7] px-3 py-2 text-center">
+                                <div class="text-lg font-semibold text-[#202223]">{{ selectedCategory?.locations_count || 0 }}</div>
+                                <div class="text-xs text-[#6d7175]">городов</div>
                             </div>
-                            <div class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4 text-center">
-                                <div class="text-xs mb-2 uppercase tracking-wide text-[#6d7175]">Уровни</div>
-                                <div class="text-2xl font-bold text-white">
-                                    {{ selectedCategory?.grades_count || 0 }}
-                                </div>
-                                <div class="text-sm text-white">Грейдов</div>
+                            <div class="rounded-lg border border-[#e1e3e5] bg-[#f6f6f7] px-3 py-2 text-center">
+                                <div class="text-lg font-semibold text-[#202223]">{{ selectedCategory?.grades_count || 0 }}</div>
+                                <div class="text-xs text-[#6d7175]">грейдов</div>
                             </div>
                         </div>
 
@@ -145,17 +133,17 @@
                         >
                             <div class="flex items-baseline justify-between gap-3">
                                 <h3 class="text-lg font-semibold text-[#202223]">Динамика публикаций</h3>
-                                <span class="text-xs text-[#6d7175]">Последние 14 дней</span>
+                                <span class="text-xs text-[#6d7175]">Последние 6 месяцев</span>
                             </div>
-                            <p class="mt-1 text-sm text-[#616161]">Количество вакансий по дате публикации.</p>
-                            <div class="mt-5 grid h-40 [grid-template-columns:repeat(14,minmax(0,1fr))] items-end gap-1" aria-label="График публикаций вакансий">
+                            <p class="mt-1 text-sm text-[#616161]">Количество вакансий по месяцам публикации.</p>
+                            <div class="mt-5 grid h-40 grid-cols-6 items-end gap-3" aria-label="График публикаций вакансий">
                                 <div v-for="point in publicationTimeline" :key="point.date" class="flex h-full min-w-0 flex-col justify-end">
                                     <span v-if="point.count" class="mb-1 text-center text-[10px] font-semibold text-[#4a4f54]">{{ point.count }}</span>
-                                    <div class="rounded-t bg-[#008060] transition-all" :class="point.count ? 'min-h-1.5' : 'h-1 bg-[#dfe3e0]'" :style="point.count ? { height: `${Math.max(8, Math.round(point.count / maxPublicationCount * 100))}%` } : undefined" :title="`${formatPublicationDate(point.date)}: ${vacancyLabel(point.count)}`"></div>
+                                    <div class="rounded-t bg-[#008060] transition-all" :class="point.count ? 'min-h-1.5' : 'h-1 bg-[#dfe3e0]'" :style="point.count ? { height: `${Math.max(8, Math.round(point.count / maxPublicationCount * 100))}%` } : undefined" :title="`${formatPublicationMonth(point.date)}: ${vacancyLabel(point.count)}`"></div>
                                 </div>
                             </div>
-                            <div class="mt-2 grid [grid-template-columns:repeat(14,minmax(0,1fr))] gap-1 text-center text-[9px] text-[#6d7175]">
-                                <span v-for="point in publicationTimeline" :key="`${point.date}-label`">{{ formatPublicationDate(point.date) }}</span>
+                            <div class="mt-2 grid grid-cols-6 gap-3 text-center text-[10px] text-[#6d7175]">
+                                <span v-for="point in publicationTimeline" :key="`${point.date}-label`">{{ formatPublicationMonth(point.date) }}</span>
                             </div>
                         </div>
 
@@ -253,18 +241,18 @@
                             v-if="selectedCategory?.grades_distribution && selectedCategory.grades_distribution.length"
                             class="rounded-xl border border-[#e1e3e5] bg-[#f6f6f7] p-4"
                         >
-                            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <h3 class="mb-4 text-lg font-semibold text-[#202223]">
                                 Распределение по грейдам
                             </h3>
                             <div class="space-y-3">
                                 <div
                                     v-for="grade in selectedCategory.grades_distribution"
                                     :key="grade.grade_id"
-                                    class="bg-white/5 rounded-lg p-3 border border-white/10"
+                                    class="rounded-lg border border-[#e1e3e5] bg-white p-3"
                                 >
                                     <div class="flex justify-between items-center mb-2">
-                                        <span class="font-semibold text-white">{{ grade.title }}</span>
-                                        <span class="text-sm text-white">{{ vacancyLabel(grade.count) }} ({{ grade.percentage }}%)</span>
+                                        <span class="font-semibold text-[#202223]">{{ grade.title }}</span>
+                                        <span class="text-sm text-[#4a4f54]">{{ vacancyLabel(grade.count) }} ({{ grade.percentage }}%)</span>
                                     </div>
                                     <div class="w-full bg-[#e1e3e5] rounded-full h-2 overflow-hidden">
                                         <div class="bg-[#008060] h-2 rounded-full transition-all duration-300" :style="{ width: grade.percentage + '%' }"></div>
@@ -319,6 +307,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 const props = defineProps({
     categories: { type: Array, required: true },
     groups: { type: Array, required: true },
+    transitions: { type: Array, default: () => [] },
 });
 
 const selectedCategory = ref(null);
@@ -383,6 +372,11 @@ const filteredOtherCategories = computed(() => {
 const marketCategories = computed(() => filteredCategories.value.filter(category => category.market_level));
 const maxMarketLevel = computed(() => Math.max(0, ...marketCategories.value.map(category => Number(category.market_level))));
 const diagramNodes = computed(() => marketCategories.value);
+const diagramTransitions = computed(() => props.transitions.filter(transition =>
+    Number(transition.group_id) === Number(selectedGroupId.value)
+    && diagramNodes.value.some(node => Number(node.id) === Number(transition.from_category_id))
+    && diagramNodes.value.some(node => Number(node.id) === Number(transition.to_category_id))
+));
 
 const groupMap = computed(() => new Map(props.groups.map(g => [g.id, g.title])));
 const getGroupTitle = (groupId) => groupMap.value.get(groupId) || 'Неизвестно';
@@ -417,9 +411,9 @@ const formatSalaryValue = (value) => {
     return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 };
 
-const formatPublicationDate = (value) => {
+const formatPublicationMonth = (value) => {
     const date = new Date(`${value}T00:00:00`);
-    return new Intl.DateTimeFormat('ru-RU', { day: '2-digit', month: '2-digit' }).format(date);
+    return new Intl.DateTimeFormat('ru-RU', { month: 'short', year: '2-digit' }).format(date).replace('.', '');
 };
 
 const getEmploymentType = (type) => {

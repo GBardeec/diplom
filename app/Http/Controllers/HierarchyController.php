@@ -69,7 +69,70 @@ class HierarchyController extends Controller
         return [
             'categories' => $categories,
             'groups' => $groups,
+            'transitions' => $this->buildTransitionData(),
         ];
+    }
+
+    private function buildTransitionData(): array
+    {
+        $vacancyCounts = DB::table('vacancy_category_vacancy')
+            ->join('vacancies', 'vacancies.id', '=', 'vacancy_category_vacancy.vacancy_id')
+            ->where('vacancies.archived', false)
+            ->where('vacancies.hidden', false)
+            ->selectRaw('vacancy_category_vacancy.vacancy_category_id as category_id, COUNT(DISTINCT vacancies.id) as vacancies_count')
+            ->groupBy('vacancy_category_vacancy.vacancy_category_id')
+            ->pluck('vacancies_count', 'category_id');
+
+        $skillsByCategory = DB::table('vacancy_category_vacancy')
+            ->join('vacancies', 'vacancies.id', '=', 'vacancy_category_vacancy.vacancy_id')
+            ->join('skill_vacancy', 'skill_vacancy.vacancy_id', '=', 'vacancies.id')
+            ->join('skills', 'skills.id', '=', 'skill_vacancy.skill_id')
+            ->where('vacancies.archived', false)
+            ->where('vacancies.hidden', false)
+            ->selectRaw('vacancy_category_vacancy.vacancy_category_id as category_id, skills.id as skill_id, skills.title, COUNT(DISTINCT vacancies.id) as vacancies_count')
+            ->groupBy('vacancy_category_vacancy.vacancy_category_id', 'skills.id', 'skills.title')
+            ->get()
+            ->groupBy('category_id')
+            ->map(fn ($skills) => $skills->keyBy('skill_id'));
+
+        return DB::table('career_transitions')
+            ->join('vacancy_categories as source', 'source.id', '=', 'career_transitions.from_category_id')
+            ->join('vacancy_categories as target', 'target.id', '=', 'career_transitions.to_category_id')
+            ->select([
+                'career_transitions.from_category_id',
+                'career_transitions.to_category_id',
+                'career_transitions.skills_similarity',
+                'source.group_id',
+            ])
+            ->orderBy('source.group_id')
+            ->orderBy('career_transitions.from_category_id')
+            ->get()
+            ->map(function ($transition) use ($skillsByCategory, $vacancyCounts) {
+                $sourceSkills = $skillsByCategory->get($transition->from_category_id, collect());
+                $targetSkills = $skillsByCategory->get($transition->to_category_id, collect());
+                $targetVacancies = max(1, (int) ($vacancyCounts[$transition->to_category_id] ?? 0));
+
+                $missingSkills = $targetSkills
+                    ->reject(fn ($skill) => $sourceSkills->has($skill->skill_id))
+                    ->sortByDesc('vacancies_count')
+                    ->take(5)
+                    ->map(fn ($skill) => [
+                        'title' => $skill->title,
+                        'percent' => (int) round($skill->vacancies_count / $targetVacancies * 100),
+                    ])
+                    ->values()
+                    ->all();
+
+                return [
+                    'from_category_id' => (int) $transition->from_category_id,
+                    'to_category_id' => (int) $transition->to_category_id,
+                    'group_id' => (int) $transition->group_id,
+                    'similarity' => (int) round($transition->skills_similarity * 100),
+                    'missing_skills' => $missingSkills,
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     private function getVacancyStats($categoryId)
@@ -304,23 +367,23 @@ class HierarchyController extends Controller
                 ($employmentStats[$type] ?? 0) + 1;
         }
 
-        // Последние 14 календарных дней относительно самой свежей публикации.
-        // Пустые дни также включаем, чтобы график показывал реальную динамику.
+        // Последние шесть месяцев относительно самой свежей публикации.
+        // Пустые месяцы также включаем, чтобы была видна сезонность публикаций.
         $publicationRows = DB::table('vacancies')
             ->whereIn('id', $vacancyIds)
             ->whereNotNull('published_at')
-            ->selectRaw('DATE(published_at) as published_date, COUNT(*) as count')
-            ->groupByRaw('DATE(published_at)')
+            ->selectRaw("DATE_FORMAT(published_at, '%Y-%m-01') as published_date, COUNT(*) as count")
+            ->groupByRaw("DATE_FORMAT(published_at, '%Y-%m-01')")
             ->orderBy('published_date')
             ->get();
 
         $publicationTimeline = [];
         if ($publicationRows->isNotEmpty()) {
             $countsByDate = $publicationRows->pluck('count', 'published_date');
-            $latestDate = \Illuminate\Support\Carbon::parse($publicationRows->last()->published_date);
+            $latestMonth = \Illuminate\Support\Carbon::parse($publicationRows->last()->published_date)->startOfMonth();
 
-            $publicationTimeline = collect(range(13, 0))->map(function (int $offset) use ($latestDate, $countsByDate) {
-                $date = $latestDate->copy()->subDays($offset)->toDateString();
+            $publicationTimeline = collect(range(5, 0))->map(function (int $offset) use ($latestMonth, $countsByDate) {
+                $date = $latestMonth->copy()->subMonths($offset)->toDateString();
                 return ['date' => $date, 'count' => (int) ($countsByDate[$date] ?? 0)];
             })->all();
         }

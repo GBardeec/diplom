@@ -113,7 +113,7 @@ class CareerMapService
                 }
 
                 $candidates = $groupItems
-                    ->filter(fn(array $target) => $target['market_level'] > $source['market_level'])
+                    ->filter(fn(array $target) => $target['market_level'] === $source['market_level'] + 1)
                     ->map(function (array $target) use ($sourceSkills, $skillsByCategory) {
                         $targetSkills = $skillsByCategory->get($target['id'], []);
                         $intersection = count(array_intersect($sourceSkills, $targetSkills));
