@@ -10,8 +10,8 @@ class CareerMapService
 {
     private const MIN_SALARY_SAMPLE = 3;
     private const MIN_SKILLS_SIMILARITY = 0.10;
-    private const MIN_COMMON_SPECIALIST_SKILLS = 3;
-    private const MIN_TARGET_SKILL_COVERAGE = 0.15;
+    private const MIN_COMMON_SPECIALIST_SKILLS = 2;
+    private const MIN_TARGET_SKILL_COVERAGE = 0.10;
     private const GENERIC_SKILL_TITLES = [
         'git', 'ci/cd', 'json', 'xml', 'http', 'rest', 'sql', 'linux',
         'docker', 'kubernetes', 'postgresql', 'mysql', 'python', 'java',
@@ -156,7 +156,7 @@ class CareerMapService
                         ['market_level', 'asc'],
                         ['market_salary_median', 'asc'],
                     ])
-                    ->take(2);
+                    ->take(3);
 
                 foreach ($candidates as $target) {
                     $rows[] = [
