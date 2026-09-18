@@ -130,7 +130,7 @@ const layout = computed(() => {
                 return { from: source.id, to: target.id, path: `M ${target.x} ${targetY} V ${middleY} H ${source.x} V ${sourceY}` };
             }
 
-            const laneX = width - 26;
+            const laneX = width - 16;
             return { from: source.id, to: target.id, path: `M ${target.x} ${targetY} V ${targetY - 16} H ${laneX} V ${sourceY + 16} H ${source.x} V ${sourceY}` };
         }
         if (levelDistance === 1) {
@@ -138,7 +138,7 @@ const layout = computed(() => {
             return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${middleY} H ${target.x} V ${targetY}` };
         }
 
-        const laneX = width - 26;
+        const laneX = width - 16;
         const sourceExitY = sourceY + 16;
         const targetEntryY = targetY - 16;
         return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${sourceExitY} H ${laneX} V ${targetEntryY} H ${target.x} V ${targetY}` };
@@ -181,7 +181,7 @@ const clearSelection = () => emit('select', null);
 .diagram-shell { min-width: 0; max-width: 100%; }
 .diagram-viewport { max-width: 100%; overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
-.diagram-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.diagram-lines { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
 .diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
 .diagram-line-muted { opacity: .34; }
 .diagram-transition-line { stroke-width: 3; opacity: 1; }
