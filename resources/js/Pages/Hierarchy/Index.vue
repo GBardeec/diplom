@@ -81,6 +81,7 @@
                 <div class="mb-5 flex flex-wrap gap-2" aria-label="Режим просмотра переходов">
                     <button v-for="mode in connectionModes" :key="mode.id" type="button" @click="connectionMode = mode.id" :class="['rounded-md border px-3 py-2 text-sm font-semibold transition', connectionMode === mode.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]' : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]']">{{ mode.title }}</button>
                 </div>
+                <p v-if="connectionMode === 'all'" class="mb-4 text-sm text-[#616161]">Показан один наиболее сильный проверенный переход из каждой профессии. Для всех подходящих переходов выберите профессию в одном из двух первых режимов.</p>
 
                 <HierarchyDiagram
                     v-if="diagramNodes.length"
@@ -324,7 +325,7 @@ const connectionMode = ref('outgoing');
 const connectionModes = [
     { id: 'outgoing', title: 'Куда развиваться' },
     { id: 'incoming', title: 'Как прийти в профессию' },
-    { id: 'all', title: 'Все связи' },
+    { id: 'all', title: 'Ключевые связи' },
 ];
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
