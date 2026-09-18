@@ -325,7 +325,6 @@ const connectionMode = ref('outgoing');
 const connectionModes = [
     { id: 'outgoing', title: 'Куда развиваться' },
     { id: 'incoming', title: 'Как прийти в профессию' },
-    { id: 'all', title: 'Ключевые связи' },
 ];
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
