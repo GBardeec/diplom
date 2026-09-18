@@ -70,25 +70,29 @@
 
             <!-- Древовидное представление -->
             <div v-else class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-[#202223]">Схема переходов между профессиями</h2>
-                    <p class="text-sm text-[#616161]">Выберите профессию, чтобы посмотреть связи</p>
+                <div v-if="!marketCategories.length" class="text-[#616161]">
+                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для профессии будет не менее трёх таких вакансий.
                 </div>
+                <template v-else>
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-[#202223]">Схема переходов между профессиями</h2>
+                        <p class="text-sm text-[#616161]">Выберите профессию, чтобы посмотреть связи</p>
+                    </div>
 
-                <div class="mb-5 flex flex-wrap gap-2" aria-label="Режим просмотра переходов">
-                    <button v-for="mode in connectionModes" :key="mode.id" type="button" @click="connectionMode = mode.id" :class="['rounded-md border px-3 py-2 text-sm font-semibold transition', connectionMode === mode.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]' : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]']">{{ mode.title }}</button>
-                </div>
-                <p v-if="connectionMode === 'all'" class="mb-4 text-sm text-[#616161]">Показаны все подтверждённые переходы между профессиями выбранного направления. Нажмите на профессию, чтобы выделить только связанные с ней стрелки.</p>
+                    <div class="mb-5 flex flex-wrap gap-2" aria-label="Режим просмотра переходов">
+                        <button v-for="mode in connectionModes" :key="mode.id" type="button" @click="connectionMode = mode.id" :class="['rounded-md border px-3 py-2 text-sm font-semibold transition', connectionMode === mode.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]' : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]']">{{ mode.title }}</button>
+                    </div>
+                    <p v-if="connectionMode === 'all'" class="mb-4 text-sm text-[#616161]">Показаны все подтверждённые переходы между профессиями выбранного направления. Нажмите на профессию, чтобы выделить только связанные с ней стрелки.</p>
 
-                <HierarchyDiagram
-                    v-if="diagramNodes.length"
-                    :nodes="diagramNodes"
-                    :transitions="diagramTransitions"
-                    :selected-id="selectedTreeNode?.id"
-                    :connection-mode="connectionMode"
-                    @select="handleTreeSelect"
-                    @show-details="handleTreeShowDetails"
-                />
+                    <HierarchyDiagram
+                        :nodes="diagramNodes"
+                        :transitions="diagramTransitions"
+                        :selected-id="selectedTreeNode?.id"
+                        :connection-mode="connectionMode"
+                        @select="handleTreeSelect"
+                        @show-details="handleTreeShowDetails"
+                    />
+                </template>
 
             </div>
 
