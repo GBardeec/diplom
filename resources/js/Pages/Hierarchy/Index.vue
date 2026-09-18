@@ -16,20 +16,17 @@
 
             <!-- Управление представлением -->
             <div class="mb-8 rounded-xl border border-[#e1e3e5] bg-white p-4 shadow-sm">
-                <div class="flex flex-col gap-3 border-b border-[#e1e3e5] pb-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p class="text-sm font-semibold text-[#202223]">Выберите направление</p>
-                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет профессии и их рыночные уровни ниже.</p>
-                    </div>
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <label class="block min-w-0 sm:w-80" for="career-direction">
+                        <span class="mb-1.5 block text-sm font-semibold text-[#202223]">Направление</span>
+                        <select id="career-direction" v-model="selectedGroupId" class="block w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20">
+                            <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.title }}</option>
+                        </select>
+                    </label>
                     <div class="flex w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
                         <button @click="viewMode = 'table'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'table' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Таблица</button>
                         <button @click="viewMode = 'tree'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'tree' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Схема</button>
                     </div>
-                </div>
-                <div class="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    <button v-for="group in groups" :key="group.id" type="button" @click="selectedGroupId = group.id" :class="['rounded-md border px-3 py-2.5 text-left text-sm font-medium transition', selectedGroupId === group.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52] shadow-sm' : 'border-[#e1e3e5] bg-white text-[#4a4f54] hover:border-[#8c9196] hover:bg-[#f6f6f7]']">
-                        {{ group.title }}
-                    </button>
                 </div>
             </div>
 
