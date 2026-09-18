@@ -38,7 +38,7 @@
                     <span class="transition-open">{{ connectionMode === 'incoming' ? 'Посмотреть путь к этой профессии' : 'Посмотреть переходы из этой профессии' }}</span>
                 </button>
             </div>
-            <p v-else class="diagram-no-transitions">Для этой профессии в текущих данных не найдено достаточно надёжных связей.</p>
+            <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
         </section>
     </div>
 </template>
@@ -59,6 +59,23 @@ const nodeById = computed(() => new Map(props.nodes.map(node => [node.id, node])
 const activeNodeId = computed(() => props.selectedId);
 const activeNode = computed(() => nodeById.value.get(activeNodeId.value) || null);
 const isAllConnections = computed(() => props.connectionMode === 'all');
+const lowestMarketLevel = computed(() => Math.min(...props.nodes.map(node => Number(node.market_level))));
+const highestMarketLevel = computed(() => Math.max(...props.nodes.map(node => Number(node.market_level))));
+const noTransitionsMessage = computed(() => {
+    if (!activeNode.value) return '';
+
+    if (props.connectionMode === 'outgoing' && Number(activeNode.value.market_level) === highestMarketLevel.value) {
+        return 'Эта профессия находится на верхнем рыночном уровне выбранного направления. На карте нет более высоких профессий для дальнейшего перехода.';
+    }
+
+    if (props.connectionMode === 'incoming' && Number(activeNode.value.market_level) === lowestMarketLevel.value) {
+        return 'Эта профессия находится на начальном рыночном уровне выбранного направления. На карте нет более ранних профессий, из которых можно перейти в неё.';
+    }
+
+    return props.connectionMode === 'incoming'
+        ? 'Для этой профессии пока не удалось подтвердить переходы из профессий более раннего рыночного уровня.'
+        : 'Для этой профессии пока не удалось подтвердить переходы к профессиям более высокого рыночного уровня.';
+});
 const selectedTransitions = computed(() => {
     if (!activeNodeId.value) return [];
     return props.connectionMode === 'incoming'
