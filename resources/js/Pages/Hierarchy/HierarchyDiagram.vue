@@ -9,7 +9,7 @@
                 <template v-if="!displayedTransitions.length">
                     <path v-for="arrow in layout.levelArrows" :key="arrow.from" :d="arrow.path" class="diagram-line diagram-line-muted" marker-end="url(#diagram-arrow)" />
                 </template>
-                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line']" marker-end="url(#diagram-arrow)" />
+                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line', { 'diagram-line-overview-selected': isOverviewArrowSelected(arrow) }]" marker-end="url(#diagram-arrow)" />
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }"><span>Уровень {{ level.number }}</span><small>{{ formatLevelRange(level) }}</small></div>
@@ -137,6 +137,8 @@ const selectRelated = transition => {
     if (node) emit('select', node);
 };
 const relatedTitle = transition => nodeById.value.get(props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)?.title;
+const isOverviewArrowSelected = arrow => isAllConnections.value && activeNodeId.value !== null
+    && (Number(arrow.from) === Number(activeNodeId.value) || Number(arrow.to) === Number(activeNodeId.value));
 const clearSelection = () => emit('select', null);
 </script>
 
@@ -167,6 +169,7 @@ const clearSelection = () => emit('select', null);
 .diagram-line-muted { opacity: .34; }
 .diagram-transition-line { stroke-width: 3; opacity: 1; }
 .diagram-line-overview { stroke-width: 1.5; opacity: .28; }
+.diagram-line-overview-selected { stroke-width: 4; opacity: 1; }
 .diagram-level-frame { position: absolute; z-index: 1; border: 1px solid #dfe3e0; border-radius: 14px; background: #ffffff80; }
 .diagram-level-label { position: absolute; left: 12px; z-index: 2; display: grid; width: 88px; color: #6d7175; font-size: .72rem; font-weight: 700; line-height: 1.1; }
 .diagram-level-label small { margin-top: 4px; color: #8c9196; font-size: .61rem; font-weight: 600; line-height: 1.15; }
