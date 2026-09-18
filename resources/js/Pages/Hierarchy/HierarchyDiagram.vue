@@ -6,13 +6,13 @@
                 <defs>
                         <marker id="diagram-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L0,8 L8,4 z" fill="#008060" /></marker>
                 </defs>
-                <template v-if="!activeTransitions.length">
+                <template v-if="!displayedTransitions.length">
                     <path v-for="arrow in layout.levelArrows" :key="arrow.from" :d="arrow.path" class="diagram-line diagram-line-muted" marker-end="url(#diagram-arrow)" />
                 </template>
-                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" class="diagram-line diagram-transition-line" marker-end="url(#diagram-arrow)" />
+                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line']" marker-end="url(#diagram-arrow)" />
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
-            <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }">Уровень {{ level.number }}</div>
+            <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }"><span>Уровень {{ level.number }}</span><small>{{ formatLevelRange(level) }}</small></div>
             <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @click="selectNode(node)">
                 <span class="diagram-node-title">{{ node.title }}</span>
                 <span class="diagram-node-meta">Медиана {{ formatSalary(node.market_salary_median) }}</span>
@@ -20,25 +20,25 @@
             </button>
             </div>
         </div>
-        <section v-if="activeNode" class="diagram-inspector" aria-live="polite">
+        <section v-if="activeNode && !isAllConnections" class="diagram-inspector" aria-live="polite">
             <div class="diagram-inspector-header">
-                <div><p class="diagram-inspector-label">Выбрана роль</p><h3>{{ activeNode.title }}</h3></div>
+                <div><p class="diagram-inspector-label">Выбрана профессия</p><h3>{{ activeNode.title }}</h3></div>
                 <div class="diagram-inspector-actions">
-                    <button type="button" class="diagram-details-button" @click="emit('show-details', activeNode)">Подробнее о роли</button>
+                    <button type="button" class="diagram-details-button" @click="emit('show-details', activeNode)">Подробнее о профессии</button>
                     <button type="button" class="diagram-inspector-close" aria-label="Закрыть переходы" @click="clearSelection">×</button>
                 </div>
             </div>
-            <div v-if="activeTransitions.length" class="transition-list">
-                <button v-for="transition in activeTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectTarget(transition.to_category_id)">
-                    <span class="transition-target">{{ nodeById.get(transition.to_category_id)?.title }}</span>
+            <div v-if="selectedTransitions.length" class="transition-list">
+                <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
+                    <span class="transition-target">{{ relatedTitle(transition) }}</span>
                     <span v-if="transition.common_skills.length" class="transition-common">Уже общее: {{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
                     <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
                     <span v-if="transition.missing_skills.length" class="transition-skills">Стоит добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
                     <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
-                    <span class="transition-open">Посмотреть переходы из этой роли</span>
+                    <span class="transition-open">{{ connectionMode === 'incoming' ? 'Посмотреть путь к этой профессии' : 'Посмотреть переходы из этой профессии' }}</span>
                 </button>
             </div>
-            <p v-else class="diagram-no-transitions">Для этой роли в текущих данных не найдено достаточно надёжных переходов выше по рынку.</p>
+            <p v-else class="diagram-no-transitions">Для этой профессии в текущих данных не найдено достаточно надёжных связей.</p>
         </section>
     </div>
 </template>
@@ -46,7 +46,7 @@
 <script setup>
 import { computed } from 'vue';
 
-const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null } });
+const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null }, connectionMode: { type: String, default: 'outgoing' } });
 const emit = defineEmits(['select', 'show-details']);
 const CARD_WIDTH = 166;
 const CARD_HEIGHT = 98;
@@ -58,8 +58,15 @@ const formatSalary = value => new Intl.NumberFormat('ru-RU').format(value) + ' �
 const nodeById = computed(() => new Map(props.nodes.map(node => [node.id, node])));
 const activeNodeId = computed(() => props.selectedId);
 const activeNode = computed(() => nodeById.value.get(activeNodeId.value) || null);
-const activeTransitions = computed(() => props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value)));
-const transitionTargetIds = computed(() => new Set(activeTransitions.value.map(transition => transition.to_category_id)));
+const isAllConnections = computed(() => props.connectionMode === 'all');
+const selectedTransitions = computed(() => {
+    if (!activeNodeId.value) return [];
+    return props.connectionMode === 'incoming'
+        ? props.transitions.filter(transition => Number(transition.to_category_id) === Number(activeNodeId.value))
+        : props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value));
+});
+const displayedTransitions = computed(() => isAllConnections.value ? props.transitions : selectedTransitions.value);
+const transitionTargetIds = computed(() => new Set(selectedTransitions.value.map(transition => props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)));
 
 const layout = computed(() => {
     const byLevel = new Map();
@@ -82,7 +89,8 @@ const layout = computed(() => {
     });
     const levels = levelNumbers.map((number, index) => {
         const y = TOP_PADDING + index * (CARD_HEIGHT + LEVEL_GAP);
-        return { number, y, x: LEFT_PADDING - 10, width: width - LEFT_PADDING - 14, frameY: y - 10, height: CARD_HEIGHT + 20 };
+        const salaries = (byLevel.get(number) || []).map(node => Number(node.market_salary_median)).filter(Boolean);
+        return { number, y, x: LEFT_PADDING - 10, width: width - LEFT_PADDING - 14, frameY: y - 10, height: CARD_HEIGHT + 20, minSalary: Math.min(...salaries), maxSalary: Math.max(...salaries) };
     });
     const levelArrows = levels.slice(0, -1).map((level, index) => {
         const next = levels[index + 1];
@@ -90,12 +98,13 @@ const layout = computed(() => {
         return { from: level.number, path: `M ${x} ${level.frameY + level.height} V ${next.frameY}` };
     });
     const positionedById = new Map(positioned.map(node => [node.id, node]));
-    const transitionArrows = activeTransitions.value.map(transition => {
+    const transitionArrows = displayedTransitions.value.map(transition => {
         const source = positionedById.get(transition.from_category_id);
         const target = positionedById.get(transition.to_category_id);
         if (!source || !target) return null;
         const sourceY = source.y + CARD_HEIGHT;
         const targetY = target.y;
+        if (isAllConnections.value) return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} L ${target.x} ${targetY}` };
         const levelDistance = Number(target.market_level) - Number(source.market_level);
         if (levelDistance === 1) {
             const middleY = sourceY + (targetY - sourceY) / 2;
@@ -110,11 +119,14 @@ const layout = computed(() => {
     return { width, height: TOP_PADDING + maxLevel * CARD_HEIGHT + Math.max(0, maxLevel - 1) * LEVEL_GAP + 28, nodes: positioned, levelArrows, transitionArrows, levels };
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
+const formatLevelRange = level => level.minSalary === level.maxSalary ? formatSalary(level.minSalary) : `${formatSalary(level.minSalary)} - ${formatSalary(level.maxSalary)}`;
 const selectNode = node => emit('select', node);
-const selectTarget = targetId => {
+const selectRelated = transition => {
+    const targetId = props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id;
     const node = nodeById.value.get(targetId);
     if (node) emit('select', node);
 };
+const relatedTitle = transition => nodeById.value.get(props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)?.title;
 const clearSelection = () => emit('select', null);
 </script>
 
@@ -144,8 +156,10 @@ const clearSelection = () => emit('select', null);
 .diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
 .diagram-line-muted { opacity: .34; }
 .diagram-transition-line { stroke-width: 3; opacity: 1; }
+.diagram-line-overview { stroke-width: 1.5; opacity: .28; }
 .diagram-level-frame { position: absolute; z-index: 1; border: 1px solid #dfe3e0; border-radius: 14px; background: #ffffff80; }
-.diagram-level-label { position: absolute; left: 12px; z-index: 2; width: 78px; color: #6d7175; font-size: .72rem; font-weight: 700; line-height: 1.1; }
+.diagram-level-label { position: absolute; left: 12px; z-index: 2; display: grid; width: 88px; color: #6d7175; font-size: .72rem; font-weight: 700; line-height: 1.1; }
+.diagram-level-label small { margin-top: 4px; color: #8c9196; font-size: .61rem; font-weight: 600; line-height: 1.15; }
 .diagram-node { position: absolute; z-index: 3; width: 166px; height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px; border: 1px solid #d2d5d8; border-radius: 10px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.08); color: #202223; cursor: pointer; transform: translateX(-50%); transition: transform .2s, border-color .2s, box-shadow .2s; }
 .diagram-node:hover { transform: translateX(-50%) translateY(-3px); border-color: #008060; box-shadow: 0 6px 14px rgba(0,128,96,.14); }
 .diagram-node-selected { border-color: #008060; box-shadow: 0 0 0 3px rgba(0,128,96,.16), 0 6px 14px rgba(0,128,96,.14); }

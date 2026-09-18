@@ -7,10 +7,10 @@
             <div class="mb-8 max-w-xl">
                 <p class="mb-2 text-sm font-semibold text-[#008060]">Карта карьерных уровней</p>
                 <h1 class="text-3xl font-semibold tracking-tight text-[#202223]">
-                    Рыночные уровни ролей
+                    Рыночные уровни профессий
                 </h1>
                 <p class="mt-3 text-[#616161]">
-                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. На схеме можно посмотреть переходы между ролями с похожими навыками.
+                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. На схеме можно посмотреть переходы между профессиями с похожими навыками.
                 </p>
             </div>
 
@@ -19,7 +19,7 @@
                 <div class="flex flex-col gap-3 border-b border-[#e1e3e5] pb-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <p class="text-sm font-semibold text-[#202223]">Выберите направление</p>
-                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет роли и их рыночные уровни ниже.</p>
+                        <p class="mt-1 text-xs text-[#6d7175]">Выбранное направление определяет профессии и их рыночные уровни ниже.</p>
                     </div>
                     <div class="flex w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
                         <button @click="viewMode = 'table'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'table' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Таблица</button>
@@ -74,8 +74,12 @@
             <!-- Древовидное представление -->
             <div v-else class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-semibold text-[#202223]">Схема возможных переходов</h2>
-                    <p class="text-sm text-[#616161]">Выберите роль, чтобы посмотреть переходы</p>
+                    <h2 class="text-2xl font-semibold text-[#202223]">Схема переходов между профессиями</h2>
+                    <p class="text-sm text-[#616161]">Выберите профессию, чтобы посмотреть связи</p>
+                </div>
+
+                <div class="mb-5 flex flex-wrap gap-2" aria-label="Режим просмотра переходов">
+                    <button v-for="mode in connectionModes" :key="mode.id" type="button" @click="connectionMode = mode.id" :class="['rounded-md border px-3 py-2 text-sm font-semibold transition', connectionMode === mode.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]' : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]']">{{ mode.title }}</button>
                 </div>
 
                 <HierarchyDiagram
@@ -83,6 +87,7 @@
                     :nodes="diagramNodes"
                     :transitions="diagramTransitions"
                     :selected-id="selectedTreeNode?.id"
+                    :connection-mode="connectionMode"
                     @select="handleTreeSelect"
                     @show-details="handleTreeShowDetails"
                 />
@@ -315,6 +320,12 @@ const isLocationsExpanded = ref(false);
 const selectedGroupId = ref(null);
 const viewMode = ref('table');
 const selectedTreeNode = ref(null);
+const connectionMode = ref('outgoing');
+const connectionModes = [
+    { id: 'outgoing', title: 'Куда развиваться' },
+    { id: 'incoming', title: 'Как прийти в профессию' },
+    { id: 'all', title: 'Все связи' },
+];
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
 const requestedGroupId = Number(new URLSearchParams(window.location.search).get('group')) || null;
@@ -354,6 +365,10 @@ watch(() => props.groups, (groups) => {
             : groups[0]?.id ?? null;
     }
 }, { immediate: true });
+
+watch(selectedGroupId, () => {
+    selectedTreeNode.value = null;
+});
 
 // Фильтрация по группе (только основные категории)
 const filteredCategories = computed(() => {
