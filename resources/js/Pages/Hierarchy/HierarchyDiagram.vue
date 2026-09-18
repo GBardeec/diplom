@@ -124,6 +124,15 @@ const layout = computed(() => {
         const targetY = target.y;
         if (isAllConnections.value) return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} L ${target.x} ${targetY}` };
         const levelDistance = Number(target.market_level) - Number(source.market_level);
+        if (props.connectionMode === 'incoming') {
+            if (levelDistance === 1) {
+                const middleY = sourceY + (targetY - sourceY) / 2;
+                return { from: source.id, to: target.id, path: `M ${target.x} ${targetY} V ${middleY} H ${source.x} V ${sourceY}` };
+            }
+
+            const laneX = width - 26;
+            return { from: source.id, to: target.id, path: `M ${target.x} ${targetY} V ${targetY - 16} H ${laneX} V ${sourceY + 16} H ${source.x} V ${sourceY}` };
+        }
         if (levelDistance === 1) {
             const middleY = sourceY + (targetY - sourceY) / 2;
             return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${middleY} H ${target.x} V ${targetY}` };
