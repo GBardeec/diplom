@@ -113,7 +113,7 @@
                     </div>
 
                     <!-- Контент с прокруткой -->
-                    <div class="space-y-4 overflow-y-auto p-4" style="max-height: calc(90vh - 120px);">
+                    <div class="space-y-4 overflow-y-auto p-4" style="max-height: calc(82vh - 120px);">
                         <!-- Общая статистика -->
                         <div class="grid grid-cols-3 gap-2">
                             <div class="rounded-lg border border-[#e1e3e5] bg-[#f6f6f7] px-3 py-2 text-center">
