@@ -36,7 +36,7 @@
             <!-- Табличное представление (карточный вид по уровням) -->
             <div v-if="viewMode === 'table'" class="space-y-8">
                 <div v-if="!marketCategories.length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 text-[#616161]">
-                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для роли будет не менее трёх таких вакансий.
+                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для профессии будет не менее трёх таких вакансий.
                 </div>
                 <template v-for="level in maxMarketLevel" :key="level">
                 <div v-if="getCategoriesByMarketLevel(level).length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
@@ -44,7 +44,7 @@
                         <span class="shopify-level-badge w-8 h-8 rounded-full flex items-center justify-center text-sm">{{ level }}</span>
                         Рыночный уровень {{ level }} из {{ maxMarketLevel }}
                     </h2>
-                    <p class="mb-4 text-sm text-[#616161]">Роли сгруппированы по медианной зарплате вакансий в выбранном направлении.</p>
+                    <p class="mb-4 text-sm text-[#616161]">Профессии сгруппированы по медианной зарплате вакансий в выбранном направлении.</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <div
                             v-for="category in getCategoriesByMarketLevel(level)"
@@ -81,7 +81,7 @@
                 <div class="mb-5 flex flex-wrap gap-2" aria-label="Режим просмотра переходов">
                     <button v-for="mode in connectionModes" :key="mode.id" type="button" @click="connectionMode = mode.id" :class="['rounded-md border px-3 py-2 text-sm font-semibold transition', connectionMode === mode.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]' : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]']">{{ mode.title }}</button>
                 </div>
-                <p v-if="connectionMode === 'all'" class="mb-4 text-sm text-[#616161]">Показан один наиболее сильный проверенный переход из каждой профессии. Для всех подходящих переходов выберите профессию в одном из двух первых режимов.</p>
+                <p v-if="connectionMode === 'all'" class="mb-4 text-sm text-[#616161]">Показаны все подтверждённые переходы между профессиями выбранного направления. Нажмите на профессию, чтобы выделить только связанные с ней стрелки.</p>
 
                 <HierarchyDiagram
                     v-if="diagramNodes.length"
@@ -194,7 +194,7 @@
                             <h3 class="mb-1 text-lg font-semibold text-[#202223]">
                                 Ключевые навыки
                             </h3>
-                            <p class="text-sm text-[#616161]">Навыки по доле вакансий выбранной роли.</p>
+                            <p class="text-sm text-[#616161]">Навыки по доле вакансий выбранной профессии.</p>
                             <div v-if="skillGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр навыков по грейду">
                                 <button type="button" :class="skillGradeButtonClass(null)" @click="selectedSkillsGradeId = null">Все вакансии</button>
                                 <button v-for="grade in skillGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id)" @click="selectedSkillsGradeId = grade.grade_id">{{ grade.title }}</button>
@@ -325,6 +325,7 @@ const connectionMode = ref('outgoing');
 const connectionModes = [
     { id: 'outgoing', title: 'Куда развиваться' },
     { id: 'incoming', title: 'Как прийти в профессию' },
+    { id: 'all', title: 'Все связи' },
 ];
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);

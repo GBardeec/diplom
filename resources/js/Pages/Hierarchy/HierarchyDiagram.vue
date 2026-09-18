@@ -82,17 +82,7 @@ const selectedTransitions = computed(() => {
         ? props.transitions.filter(transition => Number(transition.to_category_id) === Number(activeNodeId.value))
         : props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value));
 });
-const keyTransitions = computed(() => {
-    const strongestBySource = new Map();
-    props.transitions.forEach(transition => {
-        const current = strongestBySource.get(transition.from_category_id);
-        if (!current || Number(transition.similarity || 0) > Number(current.similarity || 0)) {
-            strongestBySource.set(transition.from_category_id, transition);
-        }
-    });
-    return [...strongestBySource.values()];
-});
-const displayedTransitions = computed(() => isAllConnections.value ? keyTransitions.value : selectedTransitions.value);
+const displayedTransitions = computed(() => isAllConnections.value ? props.transitions : selectedTransitions.value);
 const transitionTargetIds = computed(() => {
     if (isAllConnections.value) {
         return new Set(displayedTransitions.value
