@@ -30,12 +30,12 @@
             </div>
             <div v-if="selectedTransitions.length" class="transition-list">
                 <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
-                    <span class="transition-target">{{ relatedTitle(transition) }}</span>
-                    <span v-if="transition.common_skills.length" class="transition-common">Уже общее: {{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
+                    <span class="transition-target">{{ transitionTitle(transition) }}</span>
+                    <span v-if="transition.common_skills.length" class="transition-common">{{ connectionMode === 'incoming' ? 'Общее в вакансиях обеих профессий: ' : 'Уже общее: ' }}{{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
                     <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
-                    <span v-if="transition.missing_skills.length" class="transition-skills">Стоит добавить: {{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
+                    <span v-if="transition.missing_skills.length" class="transition-skills">{{ connectionMode === 'incoming' ? 'Для перехода стоит добавить: ' : 'Стоит добавить: ' }}{{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
                     <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
-                    <span class="transition-open">{{ connectionMode === 'incoming' ? 'Посмотреть путь к этой профессии' : 'Посмотреть переходы из этой профессии' }}</span>
+                    <span class="transition-open">{{ connectionMode === 'incoming' ? 'Выбрать исходную профессию' : 'Посмотреть переходы из этой профессии' }}</span>
                 </button>
             </div>
             <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
@@ -171,6 +171,13 @@ const selectRelated = transition => {
     if (node) emit('select', node);
 };
 const relatedTitle = transition => nodeById.value.get(props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)?.title;
+const transitionTitle = transition => {
+    const related = relatedTitle(transition);
+
+    return props.connectionMode === 'incoming'
+        ? `${related} → ${activeNode.value?.title}`
+        : related;
+};
 const isOverviewArrowSelected = arrow => isAllConnections.value && activeNodeId.value !== null
     && (Number(arrow.from) === Number(activeNodeId.value) || Number(arrow.to) === Number(activeNodeId.value));
 const clearSelection = () => emit('select', null);
