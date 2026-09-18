@@ -76,7 +76,15 @@ const keyTransitions = computed(() => {
     return [...strongestBySource.values()];
 });
 const displayedTransitions = computed(() => isAllConnections.value ? keyTransitions.value : selectedTransitions.value);
-const transitionTargetIds = computed(() => new Set(selectedTransitions.value.map(transition => props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)));
+const transitionTargetIds = computed(() => {
+    if (isAllConnections.value) {
+        return new Set(displayedTransitions.value
+            .filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value) || Number(transition.to_category_id) === Number(activeNodeId.value))
+            .map(transition => Number(transition.from_category_id) === Number(activeNodeId.value) ? transition.to_category_id : transition.from_category_id));
+    }
+
+    return new Set(selectedTransitions.value.map(transition => props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id));
+});
 
 const layout = computed(() => {
     const byLevel = new Map();
