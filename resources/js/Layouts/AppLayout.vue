@@ -17,7 +17,7 @@ const menuOpen = ref(false);
                 <nav aria-label="Основная навигация" class="hidden flex-wrap justify-end gap-x-4 gap-y-2 text-sm sm:flex sm:text-base">
                     <Link :href="route('home')" class="font-medium text-[#616161] transition hover:text-[#008060]">Главная</Link>
                     <Link :href="route('recommendations.index')" class="font-medium text-[#616161] transition hover:text-[#008060]">Карьерная оценка</Link>
-                    <Link :href="route('hierarchy.structure')" class="font-medium text-[#616161] transition hover:text-[#008060]">Карта ролей</Link>
+                    <Link :href="route('hierarchy.structure')" class="font-medium text-[#616161] transition hover:text-[#008060]">Карта профессий</Link>
                 </nav>
 
                 <button type="button" class="grid h-10 w-10 place-items-center rounded-md border border-[#c9cccf] text-[#202223] transition hover:bg-[#f6f6f7] sm:hidden" :aria-expanded="menuOpen" aria-controls="mobile-navigation" aria-label="Открыть меню" @click="menuOpen = !menuOpen">
@@ -29,7 +29,7 @@ const menuOpen = ref(false);
                 <div class="mx-auto grid max-w-7xl gap-1">
                     <Link :href="route('home')" class="rounded-md px-3 py-2.5 font-medium text-[#616161] transition hover:bg-[#f6f6f7] hover:text-[#008060]" @click="menuOpen = false">Главная</Link>
                     <Link :href="route('recommendations.index')" class="rounded-md px-3 py-2.5 font-medium text-[#616161] transition hover:bg-[#f6f6f7] hover:text-[#008060]" @click="menuOpen = false">Карьерная оценка</Link>
-                    <Link :href="route('hierarchy.structure')" class="rounded-md px-3 py-2.5 font-medium text-[#616161] transition hover:bg-[#f6f6f7] hover:text-[#008060]" @click="menuOpen = false">Карта ролей</Link>
+                    <Link :href="route('hierarchy.structure')" class="rounded-md px-3 py-2.5 font-medium text-[#616161] transition hover:bg-[#f6f6f7] hover:text-[#008060]" @click="menuOpen = false">Карта профессий</Link>
                 </div>
             </nav>
         </header>
