@@ -29,17 +29,7 @@
                     <button type="button" class="diagram-inspector-close" aria-label="Закрыть переходы" @click="clearSelection">×</button>
                 </div>
             </div>
-            <div v-if="selectedTransitions.length" class="transition-list">
-                <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
-                    <span class="transition-target">{{ transitionTitle(transition) }}</span>
-                    <span v-if="transition.common_skills.length" class="transition-common">{{ isAllConnections || connectionMode === 'incoming' ? 'Общее в вакансиях обеих профессий: ' : 'Уже общее: ' }}{{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
-                    <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
-                    <span v-if="transition.missing_skills.length" class="transition-skills">{{ isAllConnections || connectionMode === 'incoming' ? 'Для перехода стоит добавить: ' : 'Стоит добавить: ' }}{{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
-                    <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
-                    <span class="transition-open">{{ isAllConnections ? 'Выбрать связанную профессию' : (connectionMode === 'incoming' ? 'Выбрать исходную профессию' : 'Посмотреть переходы из этой профессии') }}</span>
-                </button>
-            </div>
-            <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
+            <p class="diagram-no-transitions">Нажмите на связанную стрелку, чтобы посмотреть общие навыки и то, что стоит добавить для перехода.</p>
         </section>
         <section v-if="selectedConnection" class="diagram-inspector" aria-live="polite">
             <div class="diagram-inspector-header">
@@ -94,17 +84,7 @@ const noTransitionsMessage = computed(() => {
         ? 'Для этой профессии пока не удалось подтвердить переходы из профессий более раннего зарплатного уровня.'
         : 'Для этой профессии пока не удалось подтвердить переходы к профессиям более высокого зарплатного уровня.';
 });
-const selectedTransitions = computed(() => {
-    if (!activeNodeId.value) return [];
-    if (isAllConnections.value) {
-        return props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value) || Number(transition.to_category_id) === Number(activeNodeId.value));
-    }
-
-    return props.connectionMode === 'incoming'
-        ? props.transitions.filter(transition => Number(transition.to_category_id) === Number(activeNodeId.value))
-        : props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value));
-});
-const displayedTransitions = computed(() => isAllConnections.value ? props.transitions : selectedTransitions.value);
+const displayedTransitions = computed(() => isAllConnections.value ? props.transitions : []);
 const transitionDetailsTitle = computed(() => {
     if (!selectedConnection.value) return '';
     const source = nodeById.value.get(selectedConnection.value.from_category_id)?.title || 'Исходная профессия';
@@ -188,27 +168,6 @@ const selectNode = node => {
 };
 const selectTransition = arrow => {
     selectedConnection.value = arrow.transition || null;
-};
-const selectRelated = transition => {
-    const targetId = isAllConnections.value
-        ? (Number(transition.from_category_id) === Number(activeNodeId.value) ? transition.to_category_id : transition.from_category_id)
-        : (props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id);
-    const node = nodeById.value.get(targetId);
-    if (node) emit('select', node);
-};
-const relatedTitle = transition => nodeById.value.get(props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)?.title;
-const transitionTitle = transition => {
-    if (isAllConnections.value) {
-        const source = nodeById.value.get(transition.from_category_id)?.title || 'Исходная профессия';
-        const target = nodeById.value.get(transition.to_category_id)?.title || 'Следующая профессия';
-        return `${source} → ${target}`;
-    }
-
-    const related = relatedTitle(transition);
-
-    return props.connectionMode === 'incoming'
-        ? `${related} → ${activeNode.value?.title}`
-        : related;
 };
 const isOverviewArrowSelected = arrow => isAllConnections.value && activeNodeId.value !== null
     && (Number(arrow.from) === Number(activeNodeId.value) || Number(arrow.to) === Number(activeNodeId.value));
