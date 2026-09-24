@@ -79,7 +79,11 @@
                         <p class="text-sm text-[#616161]">Выберите профессию, чтобы посмотреть связи</p>
                     </div>
 
-                    <p class="mb-4 text-sm text-[#616161]">Показаны все подтверждённые переходы. Нажмите на профессию: переходы к ней выделятся синим, переходы из неё - зелёным. Нажмите на стрелку, чтобы увидеть навыки конкретного перехода.</p>
+                    <p class="mb-3 text-sm text-[#616161]">Показаны все подтверждённые переходы. Нажмите на стрелку, чтобы увидеть навыки конкретного перехода.</p>
+                    <div class="mb-4 flex flex-wrap gap-x-4 gap-y-2 text-xs font-semibold text-[#4a4f54]" aria-label="Обозначения связей">
+                        <span class="inline-flex items-center gap-2"><i class="h-2.5 w-2.5 rounded-full bg-[#008060]"></i> Можно перейти из выбранной профессии</span>
+                        <span class="inline-flex items-center gap-2"><i class="h-2.5 w-2.5 rounded-full bg-[#2c6ecb]"></i> Можно прийти в выбранную профессию</span>
+                    </div>
 
                     <HierarchyDiagram
                         :nodes="diagramNodes"
