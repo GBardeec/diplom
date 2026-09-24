@@ -252,7 +252,7 @@ watch(() => props.nodes, () => { selectedConnection.value = null; });
 .diagram-viewport { max-width: 100%; overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
 .diagram-lines { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; }
+.diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; pointer-events: stroke; cursor: pointer; }
 .diagram-line-muted { opacity: .34; }
 .diagram-transition-line { stroke-width: 3; opacity: 1; }
 .diagram-line-overview { stroke-width: 1.5; opacity: .28; }
