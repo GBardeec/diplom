@@ -225,16 +225,16 @@ watch(() => props.nodes, () => { selectedConnection.value = null; });
 .transition-common { color: #4a4f54; }
 .transition-skills { color: #006e52; }
 .transition-open { margin-top: 2px; color: #006e52; font-size: .76rem; font-weight: 700; }
-.diagram-inspector { position: fixed; z-index: 40; right: 20px; bottom: 20px; width: min(390px, calc(100vw - 40px)); max-height: min(460px, calc(100vh - 40px)); overflow: auto; border: 1px solid #dfe3e0; border-radius: 12px; background: rgba(255, 255, 255, .98); box-shadow: 0 12px 32px rgba(32, 34, 35, .2); padding: 14px; }
+.diagram-inspector { position: fixed; z-index: 40; right: 16px; bottom: 16px; width: min(330px, calc(100vw - 32px)); max-height: min(330px, calc(100vh - 32px)); overflow: auto; border: 1px solid #dfe3e0; border-radius: 10px; background: rgba(255, 255, 255, .98); box-shadow: 0 10px 24px rgba(32, 34, 35, .18); padding: 11px; }
 .diagram-inspector-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .diagram-inspector-label { color: #6d7175; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.diagram-inspector h3 { margin-top: 2px; color: #202223; font-size: 1rem; font-weight: 700; }
-.diagram-details-button { flex: none; border: 1px solid #008060; border-radius: 7px; background: #fff; padding: 8px 10px; color: #006e52; font-size: .8rem; font-weight: 700; }
+.diagram-inspector h3 { margin-top: 2px; color: #202223; font-size: .92rem; font-weight: 700; }
+.diagram-details-button { flex: none; border: 1px solid #008060; border-radius: 7px; background: #fff; padding: 7px 8px; color: #006e52; font-size: .74rem; font-weight: 700; }
 .diagram-details-button:hover { background: #e3f1df; }
 .diagram-inspector-actions { display: flex; align-items: center; gap: 8px; }
 .diagram-inspector-close { display: grid; width: 30px; height: 30px; place-items: center; color: #6d7175; font-size: 1.3rem; line-height: 1; }
 .diagram-inspector-close:hover { color: #202223; }
-.diagram-no-transitions { margin-top: 10px; color: #616161; font-size: .88rem; }
+.diagram-no-transitions { margin-top: 8px; color: #616161; font-size: .8rem; line-height: 1.35; }
 .diagram-shell { min-width: 0; max-width: 100%; }
 .diagram-viewport { max-width: 100%; overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
