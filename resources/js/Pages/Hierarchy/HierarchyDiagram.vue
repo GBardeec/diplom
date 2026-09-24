@@ -29,20 +29,17 @@
                     <button type="button" class="diagram-inspector-close" aria-label="Закрыть переходы" @click="clearSelection">×</button>
                 </div>
             </div>
-            <p v-if="isAllConnections" class="diagram-no-transitions">Зелёным показаны переходы из этой профессии, синим - переходы в неё. Нажмите на стрелку, чтобы посмотреть навыки конкретного перехода.</p>
-            <template v-else>
-                <div v-if="selectedTransitions.length" class="transition-list">
-                    <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
-                        <span class="transition-target">{{ transitionTitle(transition) }}</span>
-                        <span v-if="transition.common_skills.length" class="transition-common">{{ connectionMode === 'incoming' ? 'Общее в вакансиях обеих профессий: ' : 'Уже общее: ' }}{{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
-                        <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
-                        <span v-if="transition.missing_skills.length" class="transition-skills">{{ connectionMode === 'incoming' ? 'Для перехода стоит добавить: ' : 'Стоит добавить: ' }}{{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
-                        <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
-                        <span class="transition-open">{{ connectionMode === 'incoming' ? 'Выбрать исходную профессию' : 'Посмотреть переходы из этой профессии' }}</span>
-                    </button>
-                </div>
-                <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
-            </template>
+            <div v-if="selectedTransitions.length" class="transition-list">
+                <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
+                    <span class="transition-target">{{ transitionTitle(transition) }}</span>
+                    <span v-if="transition.common_skills.length" class="transition-common">{{ isAllConnections || connectionMode === 'incoming' ? 'Общее в вакансиях обеих профессий: ' : 'Уже общее: ' }}{{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
+                    <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
+                    <span v-if="transition.missing_skills.length" class="transition-skills">{{ isAllConnections || connectionMode === 'incoming' ? 'Для перехода стоит добавить: ' : 'Стоит добавить: ' }}{{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
+                    <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
+                    <span class="transition-open">{{ isAllConnections ? 'Выбрать связанную профессию' : (connectionMode === 'incoming' ? 'Выбрать исходную профессию' : 'Посмотреть переходы из этой профессии') }}</span>
+                </button>
+            </div>
+            <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
         </section>
         <section v-if="selectedConnection" class="diagram-inspector" aria-live="polite">
             <div class="diagram-inspector-header">
@@ -81,6 +78,10 @@ const highestMarketLevel = computed(() => Math.max(...props.nodes.map(node => Nu
 const noTransitionsMessage = computed(() => {
     if (!activeNode.value) return '';
 
+    if (isAllConnections.value) {
+        return 'Для этой профессии пока нет подтверждённых связей с другими профессиями на карте.';
+    }
+
     if (props.connectionMode === 'outgoing' && Number(activeNode.value.market_level) === highestMarketLevel.value) {
         return 'Эта профессия находится на верхнем зарплатном уровне выбранного направления. На карте нет более высоких профессий для дальнейшего перехода.';
     }
@@ -95,6 +96,10 @@ const noTransitionsMessage = computed(() => {
 });
 const selectedTransitions = computed(() => {
     if (!activeNodeId.value) return [];
+    if (isAllConnections.value) {
+        return props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value) || Number(transition.to_category_id) === Number(activeNodeId.value));
+    }
+
     return props.connectionMode === 'incoming'
         ? props.transitions.filter(transition => Number(transition.to_category_id) === Number(activeNodeId.value))
         : props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value));
@@ -185,12 +190,20 @@ const selectTransition = arrow => {
     selectedConnection.value = arrow.transition || null;
 };
 const selectRelated = transition => {
-    const targetId = props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id;
+    const targetId = isAllConnections.value
+        ? (Number(transition.from_category_id) === Number(activeNodeId.value) ? transition.to_category_id : transition.from_category_id)
+        : (props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id);
     const node = nodeById.value.get(targetId);
     if (node) emit('select', node);
 };
 const relatedTitle = transition => nodeById.value.get(props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id)?.title;
 const transitionTitle = transition => {
+    if (isAllConnections.value) {
+        const source = nodeById.value.get(transition.from_category_id)?.title || 'Исходная профессия';
+        const target = nodeById.value.get(transition.to_category_id)?.title || 'Следующая профессия';
+        return `${source} → ${target}`;
+    }
+
     const related = relatedTitle(transition);
 
     return props.connectionMode === 'incoming'
@@ -225,7 +238,7 @@ watch(() => props.nodes, () => { selectedConnection.value = null; });
 .transition-common { color: #4a4f54; }
 .transition-skills { color: #006e52; }
 .transition-open { margin-top: 2px; color: #006e52; font-size: .76rem; font-weight: 700; }
-.diagram-inspector { position: fixed; z-index: 40; right: 16px; bottom: 16px; width: min(330px, calc(100vw - 32px)); max-height: min(330px, calc(100vh - 32px)); overflow: auto; border: 1px solid #dfe3e0; border-radius: 10px; background: rgba(255, 255, 255, .98); box-shadow: 0 10px 24px rgba(32, 34, 35, .18); padding: 11px; }
+.diagram-inspector { position: fixed; z-index: 40; right: 16px; bottom: 16px; width: min(390px, calc(100vw - 32px)); max-height: min(460px, calc(100vh - 32px)); overflow: auto; border: 1px solid #dfe3e0; border-radius: 10px; background: rgba(255, 255, 255, .98); box-shadow: 0 10px 24px rgba(32, 34, 35, .18); padding: 11px; }
 .diagram-inspector-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .diagram-inspector-label { color: #6d7175; font-size: .75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .diagram-inspector h3 { margin-top: 2px; color: #202223; font-size: .92rem; font-weight: 700; }
