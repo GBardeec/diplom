@@ -161,6 +161,10 @@
                             <h3 class="mb-4 text-lg font-semibold text-[#202223]">
                                 Зарплатная вилка
                             </h3>
+                            <div v-if="salaryGradeOptions.length" class="mb-4 flex flex-wrap gap-2" aria-label="Фильтр зарплаты по грейду">
+                                <button type="button" :class="skillGradeButtonClass(null, selectedSalaryGradeId)" @click="selectedSalaryGradeId = null">Все вакансии</button>
+                                <button v-for="grade in salaryGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedSalaryGradeId)" @click="selectedSalaryGradeId = grade.grade_id">{{ grade.title }}</button>
+                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div class="rounded-lg border border-[#e1e3e5] bg-white p-4 text-center">
                                     <div class="mb-2 text-sm text-[#616161]">Средняя зарплата</div>
@@ -175,6 +179,21 @@
                                         -
                                         {{ formatSalaryValue(selectedCategory.salary_stats.max_salary) }}
                                     </div>
+                                </div>
+                            </div>
+                            <div v-if="salaryTimeline.some(point => point.avg_salary)" class="mb-4 border-t border-[#e1e3e5] pt-4">
+                                <div class="mb-1 flex items-baseline justify-between gap-3">
+                                    <div class="text-sm font-semibold text-[#4a4f54]">Средняя зарплата по месяцам</div>
+                                    <span class="text-xs text-[#6d7175]">По вакансиям с указанной оплатой</span>
+                                </div>
+                                <div class="mt-4 grid h-28 grid-cols-6 items-end gap-3" aria-label="График средней зарплаты по месяцам">
+                                    <div v-for="point in salaryTimeline" :key="`salary-${point.date}`" class="flex h-full min-w-0 flex-col justify-end">
+                                        <span v-if="point.avg_salary" class="mb-1 text-center text-[10px] font-semibold text-[#4a4f54]">{{ formatSalaryShort(point.avg_salary) }}</span>
+                                        <div class="rounded-t bg-[#2c6ecb] transition-all" :class="point.avg_salary ? 'min-h-1.5' : 'h-1 bg-[#dfe3e0]'" :style="point.avg_salary ? { height: `${Math.max(8, Math.round(point.avg_salary / maxSalaryTimelineValue * 100))}%` } : undefined" :title="point.avg_salary ? `${formatPublicationMonth(point.date)}: ${formatSalaryValue(point.avg_salary)} (${vacancyLabel(point.count)})` : `${formatPublicationMonth(point.date)}: нет вакансий с зарплатой`"></div>
+                                    </div>
+                                </div>
+                                <div class="mt-2 grid grid-cols-6 gap-3 text-center text-[10px] text-[#6d7175]">
+                                    <span v-for="point in salaryTimeline" :key="`salary-label-${point.date}`">{{ formatPublicationMonth(point.date) }}</span>
                                 </div>
                             </div>
                             <div v-if="Object.keys(selectedCategory.salary_stats.by_grade || {}).length" class="pt-4 border-t border-[#e1e3e5]">
@@ -325,6 +344,7 @@ const viewMode = ref('tree');
 const selectedTreeNode = ref(null);
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
+const selectedSalaryGradeId = ref(null);
 const requestedGroupId = Number(new URLSearchParams(window.location.search).get('group')) || null;
 let modalCloseTimer = null;
 
@@ -344,6 +364,14 @@ const allTopLocations = computed(() => {
 const visibleTopLocations = computed(() => isLocationsExpanded.value ? allTopLocations.value : allTopLocations.value.slice(0, 8));
 const gradeSalaries = computed(() => Object.values(selectedCategory.value?.salary_stats?.by_grade || {}));
 const maxGradeSalary = computed(() => Math.max(1, ...gradeSalaries.value.map(item => item.avg || 0)));
+const salaryGradeOptions = computed(() => selectedCategory.value?.salary_stats?.timeline_by_grade || []);
+const salaryTimeline = computed(() => {
+    const stats = selectedCategory.value?.salary_stats;
+    if (!stats) return [];
+    if (selectedSalaryGradeId.value === null) return stats.timeline || [];
+    return salaryGradeOptions.value.find(grade => Number(grade.grade_id) === Number(selectedSalaryGradeId.value))?.timeline || [];
+});
+const maxSalaryTimelineValue = computed(() => Math.max(1, ...salaryTimeline.value.map(point => Number(point.avg_salary) || 0)));
 
 // Фильтрация категорий - исключаем "Другое" (sort_order === 99)
 const mainCategories = computed(() => {
@@ -420,6 +448,7 @@ const formatSalaryValue = (value) => {
     if (!value || value === 0) return 'Не указано';
     return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 };
+const formatSalaryShort = (value) => value ? `${Math.round(value / 1000)} тыс.` : 'Нет данных';
 
 const formatPublicationMonth = (value) => {
     const date = new Date(`${value}T00:00:00`);
@@ -452,6 +481,7 @@ const showCategoryDetails = (category) => {
     isLocationsExpanded.value = false;
     selectedSkillsGradeId.value = null;
     selectedLocationsGradeId.value = null;
+    selectedSalaryGradeId.value = null;
     selectedCategory.value = category;
     isCategoryModalOpen.value = true;
 };

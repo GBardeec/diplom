@@ -404,6 +404,53 @@ class HierarchyController extends Controller
             })->all();
         }
 
+        $salaryTimelineRows = DB::table('vacancies')
+            ->join('salaries', 'salaries.vacancy_id', '=', 'vacancies.id')
+            ->leftJoin('qualifications', 'qualifications.id', '=', 'vacancies.qualification_id')
+            ->whereIn('vacancies.id', $vacancyIds)
+            ->whereNotNull('vacancies.published_at')
+            ->where('salaries.currency', 'rur')
+            ->selectRaw("DATE_FORMAT(vacancies.published_at, '%Y-%m-01') as published_date")
+            ->selectRaw("qualifications.id as grade_id, COALESCE(qualifications.title, 'Не указано') as grade_title")
+            ->selectRaw("AVG(CASE WHEN salaries.`from` IS NOT NULL AND salaries.`to` IS NOT NULL THEN (salaries.`from` + salaries.`to`) / 2 WHEN salaries.`from` IS NOT NULL THEN salaries.`from` WHEN salaries.`to` IS NOT NULL THEN salaries.`to` END) as avg_salary")
+            ->selectRaw('COUNT(*) as count')
+            ->groupByRaw("DATE_FORMAT(vacancies.published_at, '%Y-%m-01'), qualifications.id, qualifications.title")
+            ->orderBy('published_date')
+            ->get();
+
+        $salaryTimeline = [];
+        $salaryTimelineByGrade = [];
+        if ($salaryTimelineRows->isNotEmpty()) {
+            $latestMonth = \Illuminate\Support\Carbon::parse($salaryTimelineRows->last()->published_date)->startOfMonth();
+            $months = collect(range(5, 0))->map(fn (int $offset) => $latestMonth->copy()->subMonths($offset)->toDateString());
+            $rowsByMonth = $salaryTimelineRows->groupBy('published_date');
+
+            $salaryTimeline = $months->map(function (string $date) use ($rowsByMonth) {
+                $rows = $rowsByMonth->get($date, collect());
+                $count = (int) $rows->sum('count');
+
+                return ['date' => $date, 'avg_salary' => $count ? (int) round($rows->sum(fn ($row) => $row->avg_salary * $row->count) / $count) : null, 'count' => $count];
+            })->all();
+
+            $salaryTimelineByGrade = $salaryTimelineRows
+                ->groupBy(fn ($row) => $row->grade_id ?? 0)
+                ->map(function ($rows, $gradeId) use ($months) {
+                    $byMonth = $rows->keyBy('published_date');
+
+                    return [
+                        'grade_id' => (int) $gradeId,
+                        'title' => $rows->first()->grade_title,
+                        'timeline' => $months->map(function (string $date) use ($byMonth) {
+                            $row = $byMonth->get($date);
+                            return ['date' => $date, 'avg_salary' => $row ? (int) round($row->avg_salary) : null, 'count' => $row ? (int) $row->count : 0];
+                        })->all(),
+                    ];
+                })
+                ->sortBy(fn (array $grade) => $this->gradeSortOrder($grade['title']))
+                ->values()
+                ->all();
+        }
+
         // Количество уникальных компаний (если есть поле company_id)
 
         // Количество уникальных локаций
@@ -427,6 +474,8 @@ class HierarchyController extends Controller
                 'min_salary' => round($salaryStats->min_salary ?? 0),
                 'max_salary' => round($salaryStats->max_salary ?? 0),
                 'by_grade' => $salaryByGrade,
+                'timeline' => $salaryTimeline,
+                'timeline_by_grade' => $salaryTimelineByGrade,
             ],
             'top_skills' => $topSkills,
             'top_skills_by_grade' => $topSkillsByGrade,
