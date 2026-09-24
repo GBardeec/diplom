@@ -161,10 +161,6 @@
                             <h3 class="mb-4 text-lg font-semibold text-[#202223]">
                                 Зарплатная вилка
                             </h3>
-                            <div v-if="salaryGradeOptions.length" class="mb-4 flex flex-wrap gap-2" aria-label="Фильтр зарплаты по грейду">
-                                <button type="button" :class="skillGradeButtonClass(null, selectedSalaryGradeId)" @click="selectedSalaryGradeId = null">Все вакансии</button>
-                                <button v-for="grade in salaryGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedSalaryGradeId)" @click="selectedSalaryGradeId = grade.grade_id">{{ grade.title }}</button>
-                            </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                 <div class="rounded-lg border border-[#e1e3e5] bg-white p-4 text-center">
                                     <div class="mb-2 text-sm text-[#616161]">Средняя зарплата</div>
@@ -186,16 +182,21 @@
                                     <div class="text-sm font-semibold text-[#4a4f54]">Средняя зарплата по месяцам</div>
                                     <span class="text-xs text-[#6d7175]">По вакансиям с указанной оплатой</span>
                                 </div>
+                                <div v-if="salaryGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр графика зарплаты по грейду">
+                                    <button type="button" :class="skillGradeButtonClass(null, selectedSalaryGradeId)" @click="selectedSalaryGradeId = null">Все вакансии</button>
+                                    <button v-for="grade in salaryGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedSalaryGradeId)" @click="selectedSalaryGradeId = grade.grade_id">{{ grade.title }}</button>
+                                </div>
                                 <div class="mt-4 grid h-28 grid-cols-6 items-end gap-3" aria-label="График средней зарплаты по месяцам">
                                     <div v-for="point in salaryTimeline" :key="`salary-${point.date}`" class="flex h-full min-w-0 flex-col justify-end">
                                         <span v-if="point.avg_salary" class="mb-1 text-center text-[10px] font-semibold text-[#4a4f54]">{{ formatSalaryShort(point.avg_salary) }}</span>
-                                        <div class="rounded-t bg-[#2c6ecb] transition-all" :class="point.avg_salary ? 'min-h-1.5' : 'h-1 bg-[#dfe3e0]'" :style="point.avg_salary ? { height: `${Math.max(8, Math.round(point.avg_salary / maxSalaryTimelineValue * 100))}%` } : undefined" :title="point.avg_salary ? `${formatPublicationMonth(point.date)}: ${formatSalaryValue(point.avg_salary)} (${vacancyLabel(point.count)})` : `${formatPublicationMonth(point.date)}: нет вакансий с зарплатой`"></div>
+                                        <div class="rounded-t bg-[#008060] transition-all" :class="point.avg_salary ? 'min-h-1.5' : 'h-1 bg-[#dfe3e0]'" :style="point.avg_salary ? { height: `${Math.max(8, Math.round(point.avg_salary / maxSalaryTimelineValue * 100))}%` } : undefined" :title="point.avg_salary ? `${formatPublicationMonth(point.date)}: ${formatSalaryValue(point.avg_salary)} (${vacancyLabel(point.count)})` : `${formatPublicationMonth(point.date)}: нет вакансий с зарплатой`"></div>
                                     </div>
                                 </div>
                                 <div class="mt-2 grid grid-cols-6 gap-3 text-center text-[10px] text-[#6d7175]">
                                     <span v-for="point in salaryTimeline" :key="`salary-label-${point.date}`">{{ formatPublicationMonth(point.date) }}</span>
                                 </div>
                             </div>
+                            <p v-else class="mb-4 border-t border-[#e1e3e5] pt-4 text-sm text-[#616161]">В выбранной выборке нет вакансий с указанной зарплатой.</p>
                             <div v-if="Object.keys(selectedCategory.salary_stats.by_grade || {}).length" class="pt-4 border-t border-[#e1e3e5]">
                                 <div class="mb-3 text-sm font-semibold text-[#4a4f54]">Средняя зарплата по грейдам</div>
                                 <div class="space-y-3">
@@ -216,6 +217,7 @@
                                 Ключевые навыки
                             </h3>
                             <p class="text-sm text-[#616161]">Навыки по доле вакансий выбранной профессии.</p>
+                            <div v-if="monthOptions.length" class="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1"><button type="button" :class="skillGradeButtonClass(null, selectedSkillsMonth)" @click="selectedSkillsMonth = null">Все месяцы</button><button v-for="month in monthOptions" :key="`skills-${month.value}`" type="button" :class="skillGradeButtonClass(month.value, selectedSkillsMonth)" @click="selectedSkillsMonth = month.value">{{ month.title }}</button></div>
                             <div v-if="skillGradeOptions.length" class="mt-3 flex flex-wrap gap-2" aria-label="Фильтр навыков по грейду">
                                 <button type="button" :class="skillGradeButtonClass(null)" @click="selectedSkillsGradeId = null">Все вакансии</button>
                                 <button v-for="grade in skillGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id)" @click="selectedSkillsGradeId = grade.grade_id">{{ grade.title }}</button>
@@ -226,6 +228,7 @@
                                     <div class="h-2 overflow-hidden rounded-full bg-[#e1e3e5]"><div class="h-2 rounded-full bg-[#008060]" :style="{ width: `${skill.percentage}%` }"></div></div>
                                 </div>
                             </div>
+                            <p v-if="!visibleTopSkills.length" class="mt-4 text-sm text-[#616161]">В выбранном месяце вакансий с указанными навыками не найдено.</p>
                             <button v-if="allTopSkills.length > 8" type="button" class="mt-4 text-sm font-semibold text-[#008060] hover:text-[#006e52]" @click="isSkillsExpanded = !isSkillsExpanded">{{ isSkillsExpanded ? 'Свернуть список' : `Показать все навыки (${allTopSkills.length})` }}</button>
                         </div>
 
@@ -238,6 +241,7 @@
                                 География вакансий
                             </h3>
                             <p class="text-sm text-[#616161]">Распределение вакансий по городам и средняя зарплата по вакансиям с указанной оплатой.</p>
+                            <div v-if="monthOptions.length" class="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1"><button type="button" :class="skillGradeButtonClass(null, selectedLocationsMonth)" @click="selectedLocationsMonth = null">Все месяцы</button><button v-for="month in monthOptions" :key="`locations-${month.value}`" type="button" :class="skillGradeButtonClass(month.value, selectedLocationsMonth)" @click="selectedLocationsMonth = month.value">{{ month.title }}</button></div>
                             <div v-if="locationGradeOptions.length" class="mt-3 mb-4 flex flex-wrap gap-2" aria-label="Фильтр городов по грейду">
                                 <button type="button" :class="skillGradeButtonClass(null, selectedLocationsGradeId)" @click="selectedLocationsGradeId = null">Все вакансии</button>
                                 <button v-for="grade in locationGradeOptions" :key="grade.grade_id" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedLocationsGradeId)" @click="selectedLocationsGradeId = grade.grade_id">{{ grade.title }}</button>
@@ -258,6 +262,8 @@
                                     </div>
                                 </div>
                             </div>
+                            <p v-if="!gradesStats.grades_distribution?.length" class="text-sm text-[#616161]">В выбранном месяце вакансий с указанным грейдом не найдено.</p>
+                            <p v-if="!visibleTopLocations.length" class="mt-4 text-sm text-[#616161]">В выбранном месяце вакансий с указанной географией не найдено.</p>
                             <button v-if="allTopLocations.length > 8" type="button" class="mt-4 text-sm font-semibold text-[#008060] hover:text-[#006e52]" @click="isLocationsExpanded = !isLocationsExpanded">{{ isLocationsExpanded ? 'Свернуть список' : `Показать все города (${allTopLocations.length})` }}</button>
                         </div>
 
@@ -269,9 +275,10 @@
                             <h3 class="mb-4 text-lg font-semibold text-[#202223]">
                                 Распределение по грейдам
                             </h3>
+                            <div v-if="monthOptions.length" class="mb-4 flex flex-nowrap gap-2 overflow-x-auto pb-1"><button type="button" :class="skillGradeButtonClass(null, selectedGradesMonth)" @click="selectedGradesMonth = null">Все месяцы</button><button v-for="month in monthOptions" :key="`grades-${month.value}`" type="button" :class="skillGradeButtonClass(month.value, selectedGradesMonth)" @click="selectedGradesMonth = month.value">{{ month.title }}</button></div>
                             <div class="space-y-3">
                                 <div
-                                    v-for="grade in selectedCategory.grades_distribution"
+                                    v-for="grade in gradesStats.grades_distribution"
                                     :key="grade.grade_id"
                                     class="rounded-lg border border-[#e1e3e5] bg-white p-3"
                                 >
@@ -295,9 +302,11 @@
                                 Формат работы
                             </h3>
                             <p class="text-sm text-[#616161]">Как распределяются форматы работы в вакансиях.</p>
+                            <div v-if="monthOptions.length" class="mt-3 flex flex-nowrap gap-2 overflow-x-auto pb-1"><button type="button" :class="skillGradeButtonClass(null, selectedEmploymentMonth)" @click="selectedEmploymentMonth = null">Все месяцы</button><button v-for="month in monthOptions" :key="`employment-${month.value}`" type="button" :class="skillGradeButtonClass(month.value, selectedEmploymentMonth)" @click="selectedEmploymentMonth = month.value">{{ month.title }}</button></div>
+                            <div v-if="selectedCategory.grades_distribution?.length" class="mt-3 mb-4 flex flex-nowrap gap-2 overflow-x-auto pb-1"><button type="button" :class="skillGradeButtonClass(null, selectedEmploymentGradeId)" @click="selectedEmploymentGradeId = null">Все грейды</button><button v-for="grade in selectedCategory.grades_distribution" :key="`employment-grade-${grade.grade_id}`" type="button" :class="skillGradeButtonClass(grade.grade_id, selectedEmploymentGradeId)" @click="selectedEmploymentGradeId = grade.grade_id">{{ grade.title }}</button></div>
                             <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div
-                                    v-for="(count, type) in selectedCategory.employment_stats"
+                                    v-for="(count, type) in employmentStatsSource.employment_stats"
                                     :key="type"
                                     class="rounded-lg border border-[#e1e3e5] bg-white p-3 text-center transition hover:border-[#8c9196]"
                                 >
@@ -307,6 +316,7 @@
                                     <div class="mt-1 text-xs text-[#6d7175]">{{ employmentPercent(count) }}%</div>
                                 </div>
                             </div>
+                            <p v-if="!Object.keys(employmentStatsSource.employment_stats || {}).length" class="text-sm text-[#616161]">В выбранной выборке нет вакансий с указанным форматом работы.</p>
                         </div>
                     </div>
 
@@ -345,20 +355,31 @@ const selectedTreeNode = ref(null);
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
 const selectedSalaryGradeId = ref(null);
+const selectedSkillsMonth = ref(null);
+const selectedLocationsMonth = ref(null);
+const selectedGradesMonth = ref(null);
+const selectedEmploymentMonth = ref(null);
+const selectedEmploymentGradeId = ref(null);
+const sectionStats = ref({ skills: null, locations: null, grades: null, employment: null });
 const requestedGroupId = Number(new URLSearchParams(window.location.search).get('group')) || null;
 let modalCloseTimer = null;
 
 const publicationTimeline = computed(() => selectedCategory.value?.publication_timeline || []);
+const monthOptions = computed(() => publicationTimeline.value.map(point => ({ value: point.date.slice(0, 7), title: formatPublicationMonth(point.date) })));
 const maxPublicationCount = computed(() => Math.max(1, ...publicationTimeline.value.map(point => point.count)));
-const skillGradeOptions = computed(() => selectedCategory.value?.top_skills_by_grade || []);
+const skillStats = computed(() => sectionStats.value.skills || selectedCategory.value || {});
+const locationStats = computed(() => sectionStats.value.locations || selectedCategory.value || {});
+const gradesStats = computed(() => sectionStats.value.grades || selectedCategory.value || {});
+const employmentStatsSource = computed(() => sectionStats.value.employment || selectedCategory.value || {});
+const skillGradeOptions = computed(() => skillStats.value.top_skills_by_grade || []);
 const allTopSkills = computed(() => {
-    if (selectedSkillsGradeId.value === null) return selectedCategory.value?.top_skills || [];
+    if (selectedSkillsGradeId.value === null) return skillStats.value.top_skills || [];
     return skillGradeOptions.value.find(grade => Number(grade.grade_id) === Number(selectedSkillsGradeId.value))?.skills || [];
 });
 const visibleTopSkills = computed(() => isSkillsExpanded.value ? allTopSkills.value : allTopSkills.value.slice(0, 8));
-const locationGradeOptions = computed(() => selectedCategory.value?.top_locations_by_grade || []);
+const locationGradeOptions = computed(() => locationStats.value.top_locations_by_grade || []);
 const allTopLocations = computed(() => {
-    if (selectedLocationsGradeId.value === null) return selectedCategory.value?.top_locations || [];
+    if (selectedLocationsGradeId.value === null) return locationStats.value.top_locations || [];
     return locationGradeOptions.value.find(grade => Number(grade.grade_id) === Number(selectedLocationsGradeId.value))?.locations || [];
 });
 const visibleTopLocations = computed(() => isLocationsExpanded.value ? allTopLocations.value : allTopLocations.value.slice(0, 8));
@@ -439,7 +460,7 @@ const getIconForCategory = () => '';
 
 const skillGradeButtonClass = (gradeId, selectedGradeId = selectedSkillsGradeId.value) => [
     'rounded-md border px-3 py-1.5 text-xs font-semibold transition',
-    Number(selectedGradeId) === Number(gradeId) && (selectedGradeId !== null || gradeId === null)
+    String(selectedGradeId) === String(gradeId) && (selectedGradeId !== null || gradeId === null)
         ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]'
         : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]',
 ];
@@ -449,10 +470,23 @@ const formatSalaryValue = (value) => {
     return new Intl.NumberFormat('ru-RU').format(value) + ' ₽';
 };
 const formatSalaryShort = (value) => value ? `${Math.round(value / 1000)} тыс.` : 'Нет данных';
+const loadSectionStats = async (section, month, gradeId = null) => {
+    if (!selectedCategory.value) return;
+    if (!month && gradeId === null) { sectionStats.value = { ...sectionStats.value, [section]: null }; return; }
+    const params = new URLSearchParams();
+    if (month) params.set('month', month);
+    if (gradeId !== null) params.set('grade_id', gradeId);
+    const response = await fetch(`/hierarchy-structure/categories/${selectedCategory.value.id}/statistics?${params}`, { headers: { Accept: 'application/json' } });
+    if (response.ok) sectionStats.value = { ...sectionStats.value, [section]: await response.json() };
+};
+watch(selectedSkillsMonth, month => loadSectionStats('skills', month));
+watch(selectedLocationsMonth, month => loadSectionStats('locations', month));
+watch(selectedGradesMonth, month => loadSectionStats('grades', month));
+watch([selectedEmploymentMonth, selectedEmploymentGradeId], ([month, gradeId]) => loadSectionStats('employment', month, gradeId));
 
 const formatPublicationMonth = (value) => {
     const date = new Date(`${value}T00:00:00`);
-    return new Intl.DateTimeFormat('ru-RU', { month: 'short', year: '2-digit' }).format(date).replace('.', '');
+    return new Intl.DateTimeFormat('ru-RU', { month: 'short', year: '2-digit' }).format(date).replace(/\./g, '').replace(/\s*г$/u, '');
 };
 
 const getEmploymentType = (type) => {
@@ -482,6 +516,12 @@ const showCategoryDetails = (category) => {
     selectedSkillsGradeId.value = null;
     selectedLocationsGradeId.value = null;
     selectedSalaryGradeId.value = null;
+    selectedSkillsMonth.value = null;
+    selectedLocationsMonth.value = null;
+    selectedGradesMonth.value = null;
+    selectedEmploymentMonth.value = null;
+    selectedEmploymentGradeId.value = null;
+    sectionStats.value = { skills: null, locations: null, grades: null, employment: null };
     selectedCategory.value = category;
     isCategoryModalOpen.value = true;
 };

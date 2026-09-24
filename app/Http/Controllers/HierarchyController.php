@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\VacancyCategory;
 use App\Models\VacancyGroup;
 use App\Services\HierarchyCache;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -15,6 +16,22 @@ class HierarchyController extends Controller
         $data = HierarchyCache::remember(fn () => $this->buildHierarchyData());
 
         return Inertia::render('Hierarchy/Index', $data);
+    }
+
+    public function statistics(Request $request, int $categoryId)
+    {
+        $data = $request->validate([
+            'month' => ['nullable', 'date_format:Y-m'],
+            'grade_id' => ['nullable', 'integer'],
+        ]);
+
+        return response()->json(HierarchyCache::statistics(
+            $categoryId,
+            'modal',
+            $data['month'] ?? null,
+            isset($data['grade_id']) ? (int) $data['grade_id'] : null,
+            fn () => $this->getVacancyStats($categoryId, $data['month'] ?? null, $data['grade_id'] ?? null),
+        ));
     }
 
     private function buildHierarchyData(): array
@@ -151,15 +168,23 @@ class HierarchyController extends Controller
             ->all();
     }
 
-    private function getVacancyStats($categoryId)
+    private function getVacancyStats($categoryId, ?string $month = null, ?int $gradeId = null)
     {
         // Получаем ID всех вакансий категории
-        $vacancyIds = DB::table('vacancies')
+        $vacancyQuery = DB::table('vacancies')
             ->join('vacancy_category_vacancy', 'vacancy_category_vacancy.vacancy_id', '=', 'vacancies.id')
             ->where('vacancy_category_vacancy.vacancy_category_id', $categoryId)
             ->where('archived', false)
-            ->where('hidden', false)
-            ->pluck('vacancies.id');
+            ->where('hidden', false);
+
+        if ($month) {
+            $vacancyQuery->whereRaw("DATE_FORMAT(vacancies.published_at, '%Y-%m') = ?", [$month]);
+        }
+        if ($gradeId !== null) {
+            $vacancyQuery->where('vacancies.qualification_id', $gradeId);
+        }
+
+        $vacancyIds = $vacancyQuery->pluck('vacancies.id');
 
         if ($vacancyIds->isEmpty()) {
             return [

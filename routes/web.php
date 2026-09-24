@@ -17,6 +17,7 @@ Route::get('/competency-analysis', function () {
 
 // Иерархическая структура
 Route::get('/hierarchy-structure', [HierarchyController::class, 'index'])->name('hierarchy.structure');
+Route::get('/hierarchy-structure/categories/{categoryId}/statistics', [HierarchyController::class, 'statistics'])->name('hierarchy.statistics');
 
 Route::get('/recommendations', [RecommendationController::class, 'index'])->name('recommendations.index');
 Route::get('/recommendations/{reportUuid}', [RecommendationController::class, 'show'])->name('recommendations.show');
