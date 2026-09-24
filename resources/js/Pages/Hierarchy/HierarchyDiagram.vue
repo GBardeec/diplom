@@ -21,7 +21,7 @@
             </button>
             </div>
         </div>
-        <section v-if="activeNode && !isAllConnections" class="diagram-inspector" aria-live="polite">
+        <section v-if="activeNode && !selectedConnection" class="diagram-inspector" aria-live="polite">
             <div class="diagram-inspector-header">
                 <div><p class="diagram-inspector-label">Выбрана профессия</p><h3>{{ activeNode.title }}</h3></div>
                 <div class="diagram-inspector-actions">
@@ -29,17 +29,20 @@
                     <button type="button" class="diagram-inspector-close" aria-label="Закрыть переходы" @click="clearSelection">×</button>
                 </div>
             </div>
-            <div v-if="selectedTransitions.length" class="transition-list">
-                <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
-                    <span class="transition-target">{{ transitionTitle(transition) }}</span>
-                    <span v-if="transition.common_skills.length" class="transition-common">{{ connectionMode === 'incoming' ? 'Общее в вакансиях обеих профессий: ' : 'Уже общее: ' }}{{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
-                    <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
-                    <span v-if="transition.missing_skills.length" class="transition-skills">{{ connectionMode === 'incoming' ? 'Для перехода стоит добавить: ' : 'Стоит добавить: ' }}{{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
-                    <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
-                    <span class="transition-open">{{ connectionMode === 'incoming' ? 'Выбрать исходную профессию' : 'Посмотреть переходы из этой профессии' }}</span>
-                </button>
-            </div>
-            <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
+            <p v-if="isAllConnections" class="diagram-no-transitions">Зелёным показаны переходы из этой профессии, синим - переходы в неё. Нажмите на стрелку, чтобы посмотреть навыки конкретного перехода.</p>
+            <template v-else>
+                <div v-if="selectedTransitions.length" class="transition-list">
+                    <button v-for="transition in selectedTransitions" :key="`${transition.from_category_id}-${transition.to_category_id}`" type="button" class="transition-item" @click="selectRelated(transition)">
+                        <span class="transition-target">{{ transitionTitle(transition) }}</span>
+                        <span v-if="transition.common_skills.length" class="transition-common">{{ connectionMode === 'incoming' ? 'Общее в вакансиях обеих профессий: ' : 'Уже общее: ' }}{{ transition.common_skills.map(skill => skill.title).join(', ') }}</span>
+                        <span v-else class="transition-common">Общих навыков в вакансиях почти нет.</span>
+                        <span v-if="transition.missing_skills.length" class="transition-skills">{{ connectionMode === 'incoming' ? 'Для перехода стоит добавить: ' : 'Стоит добавить: ' }}{{ transition.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</span>
+                        <span v-else class="transition-skills">Явных недостающих навыков не найдено.</span>
+                        <span class="transition-open">{{ connectionMode === 'incoming' ? 'Выбрать исходную профессию' : 'Посмотреть переходы из этой профессии' }}</span>
+                    </button>
+                </div>
+                <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
+            </template>
         </section>
         <section v-if="selectedConnection" class="diagram-inspector" aria-live="polite">
             <div class="diagram-inspector-header">
