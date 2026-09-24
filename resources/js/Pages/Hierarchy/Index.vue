@@ -5,12 +5,12 @@
         <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
             <!-- Заголовок -->
             <div class="mb-8 max-w-xl">
-                <p class="mb-2 text-sm font-semibold text-[#008060]">Карта карьерных уровней</p>
+                <p class="mb-2 text-sm font-semibold text-[#008060]">Карта зарплатных уровней</p>
                 <h1 class="text-3xl font-semibold tracking-tight text-[#202223]">
-                    Рыночные уровни профессий
+                    Зарплатные уровни профессий
                 </h1>
                 <p class="mt-3 text-[#616161]">
-                    Уровни рассчитываются по медианной зарплате вакансий внутри направления. На схеме можно посмотреть переходы между профессиями с похожими навыками.
+                    Зарплатные уровни рассчитываются по медианной зарплате вакансий внутри направления. На схеме можно посмотреть переходы между профессиями с похожими навыками.
                 </p>
             </div>
 
@@ -33,13 +33,13 @@
             <!-- Табличное представление (карточный вид по уровням) -->
             <div v-if="viewMode === 'table'" class="space-y-8">
                 <div v-if="!marketCategories.length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 text-[#616161]">
-                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для профессии будет не менее трёх таких вакансий.
+                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Зарплатный уровень появится, когда для профессии будет не менее трёх таких вакансий.
                 </div>
                 <template v-for="level in maxMarketLevel" :key="level">
                 <div v-if="getCategoriesByMarketLevel(level).length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                     <h2 class="mb-2 flex items-center gap-2 text-2xl font-semibold text-[#202223]">
                         <span class="shopify-level-badge w-8 h-8 rounded-full flex items-center justify-center text-sm">{{ level }}</span>
-                        Рыночный уровень {{ level }} из {{ maxMarketLevel }}
+                        Зарплатный уровень {{ level }} из {{ maxMarketLevel }}
                     </h2>
                     <p class="mb-4 text-sm text-[#616161]">Профессии сгруппированы по медианной зарплате вакансий в выбранном направлении.</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -71,24 +71,21 @@
             <!-- Древовидное представление -->
             <div v-else class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                 <div v-if="!marketCategories.length" class="text-[#616161]">
-                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Рыночный уровень появится, когда для профессии будет не менее трёх таких вакансий.
+                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Зарплатный уровень появится, когда для профессии будет не менее трёх таких вакансий.
                 </div>
                 <template v-else>
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="flex justify-between items-center mb-3">
                         <h2 class="text-2xl font-semibold text-[#202223]">Схема переходов между профессиями</h2>
                         <p class="text-sm text-[#616161]">Выберите профессию, чтобы посмотреть связи</p>
                     </div>
 
-                    <div class="mb-5 flex flex-wrap gap-2" aria-label="Режим просмотра переходов">
-                        <button v-for="mode in connectionModes" :key="mode.id" type="button" @click="connectionMode = mode.id" :class="['rounded-md border px-3 py-2 text-sm font-semibold transition', connectionMode === mode.id ? 'border-[#008060] bg-[#e3f1df] text-[#006e52]' : 'border-[#c9cccf] bg-white text-[#4a4f54] hover:border-[#8c9196]']">{{ mode.title }}</button>
-                    </div>
-                    <p v-if="connectionMode === 'all'" class="mb-4 text-sm text-[#616161]">Показаны все подтверждённые переходы между профессиями выбранного направления. Нажмите на профессию, чтобы выделить только связанные с ней стрелки.</p>
+                    <p class="mb-4 text-sm text-[#616161]">Показаны все подтверждённые переходы. Нажмите на профессию: переходы к ней выделятся синим, переходы из неё - зелёным. Нажмите на стрелку, чтобы увидеть навыки конкретного перехода.</p>
 
                     <HierarchyDiagram
                         :nodes="diagramNodes"
                         :transitions="diagramTransitions"
                         :selected-id="selectedTreeNode?.id"
-                        :connection-mode="connectionMode"
+                        connection-mode="all"
                         @select="handleTreeSelect"
                         @show-details="handleTreeShowDetails"
                     />
@@ -320,14 +317,8 @@ const isCategoryModalOpen = ref(false);
 const isSkillsExpanded = ref(false);
 const isLocationsExpanded = ref(false);
 const selectedGroupId = ref(null);
-const viewMode = ref('table');
+const viewMode = ref('tree');
 const selectedTreeNode = ref(null);
-const connectionMode = ref('outgoing');
-const connectionModes = [
-    { id: 'outgoing', title: 'Куда развиваться' },
-    { id: 'incoming', title: 'Как прийти в профессию' },
-    { id: 'all', title: 'Все связи' },
-];
 const selectedSkillsGradeId = ref(null);
 const selectedLocationsGradeId = ref(null);
 const requestedGroupId = Number(new URLSearchParams(window.location.search).get('group')) || null;

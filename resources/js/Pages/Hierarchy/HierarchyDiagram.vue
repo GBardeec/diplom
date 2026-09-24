@@ -5,14 +5,15 @@
             <svg class="diagram-lines" :viewBox="`0 0 ${layout.width} ${layout.height}`" aria-hidden="true">
                 <defs>
                         <marker id="diagram-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L0,8 L8,4 z" fill="#008060" /></marker>
+                        <marker id="diagram-arrow-incoming" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="userSpaceOnUse"><path d="M0,0 L0,8 L8,4 z" fill="#2c6ecb" /></marker>
                 </defs>
                 <template v-if="!displayedTransitions.length">
                     <path v-for="arrow in layout.levelArrows" :key="arrow.from" :d="arrow.path" class="diagram-line diagram-line-muted" marker-end="url(#diagram-arrow)" />
                 </template>
-                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line', { 'diagram-line-overview-selected': isOverviewArrowSelected(arrow) }]" marker-end="url(#diagram-arrow)" />
+                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line', connectionDirectionClass(arrow), { 'diagram-line-overview-selected': isOverviewArrowSelected(arrow) }]" :marker-end="markerForArrow(arrow)" @click.stop="selectTransition(arrow)" />
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
-            <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }"><span>Уровень {{ level.number }}</span><small>{{ formatLevelRange(level) }}</small></div>
+            <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }"><span>Зарплатный уровень {{ level.number }}</span><small>{{ formatLevelRange(level) }}</small></div>
             <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @click="selectNode(node)">
                 <span class="diagram-node-title">{{ node.title }}</span>
                 <span class="diagram-node-meta">Медиана {{ formatSalary(node.market_salary_median) }}</span>
@@ -40,11 +41,23 @@
             </div>
             <p v-else class="diagram-no-transitions">{{ noTransitionsMessage }}</p>
         </section>
+        <section v-if="selectedConnection" class="diagram-inspector" aria-live="polite">
+            <div class="diagram-inspector-header">
+                <div><p class="diagram-inspector-label">Переход между профессиями</p><h3>{{ transitionDetailsTitle }}</h3></div>
+                <button type="button" class="diagram-inspector-close" aria-label="Закрыть сведения о переходе" @click="selectedConnection = null">×</button>
+            </div>
+            <div class="transition-details">
+                <p v-if="selectedConnection.common_skills?.length" class="transition-common">Общее в вакансиях обеих профессий: {{ selectedConnection.common_skills.map(skill => skill.title).join(', ') }}</p>
+                <p v-else class="transition-common">Общих навыков в вакансиях почти нет.</p>
+                <p v-if="selectedConnection.missing_skills?.length" class="transition-skills">Для перехода стоит добавить: {{ selectedConnection.missing_skills.map(skill => `${skill.title} (${skill.percent}%)`).join(', ') }}</p>
+                <p v-else class="transition-skills">Явных недостающих навыков не найдено.</p>
+            </div>
+        </section>
     </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null }, connectionMode: { type: String, default: 'outgoing' } });
 const emit = defineEmits(['select', 'show-details']);
@@ -58,6 +71,7 @@ const formatSalary = value => new Intl.NumberFormat('ru-RU').format(value) + ' �
 const nodeById = computed(() => new Map(props.nodes.map(node => [node.id, node])));
 const activeNodeId = computed(() => props.selectedId);
 const activeNode = computed(() => nodeById.value.get(activeNodeId.value) || null);
+const selectedConnection = ref(null);
 const isAllConnections = computed(() => props.connectionMode === 'all');
 const lowestMarketLevel = computed(() => Math.min(...props.nodes.map(node => Number(node.market_level))));
 const highestMarketLevel = computed(() => Math.max(...props.nodes.map(node => Number(node.market_level))));
@@ -65,16 +79,16 @@ const noTransitionsMessage = computed(() => {
     if (!activeNode.value) return '';
 
     if (props.connectionMode === 'outgoing' && Number(activeNode.value.market_level) === highestMarketLevel.value) {
-        return 'Эта профессия находится на верхнем рыночном уровне выбранного направления. На карте нет более высоких профессий для дальнейшего перехода.';
+        return 'Эта профессия находится на верхнем зарплатном уровне выбранного направления. На карте нет более высоких профессий для дальнейшего перехода.';
     }
 
     if (props.connectionMode === 'incoming' && Number(activeNode.value.market_level) === lowestMarketLevel.value) {
-        return 'Эта профессия находится на начальном рыночном уровне выбранного направления. На карте нет более ранних профессий, из которых можно перейти в неё.';
+        return 'Эта профессия находится на начальном зарплатном уровне выбранного направления. На карте нет более ранних профессий, из которых можно перейти в неё.';
     }
 
     return props.connectionMode === 'incoming'
-        ? 'Для этой профессии пока не удалось подтвердить переходы из профессий более раннего рыночного уровня.'
-        : 'Для этой профессии пока не удалось подтвердить переходы к профессиям более высокого рыночного уровня.';
+        ? 'Для этой профессии пока не удалось подтвердить переходы из профессий более раннего зарплатного уровня.'
+        : 'Для этой профессии пока не удалось подтвердить переходы к профессиям более высокого зарплатного уровня.';
 });
 const selectedTransitions = computed(() => {
     if (!activeNodeId.value) return [];
@@ -83,6 +97,12 @@ const selectedTransitions = computed(() => {
         : props.transitions.filter(transition => Number(transition.from_category_id) === Number(activeNodeId.value));
 });
 const displayedTransitions = computed(() => isAllConnections.value ? props.transitions : selectedTransitions.value);
+const transitionDetailsTitle = computed(() => {
+    if (!selectedConnection.value) return '';
+    const source = nodeById.value.get(selectedConnection.value.from_category_id)?.title || 'Исходная профессия';
+    const target = nodeById.value.get(selectedConnection.value.to_category_id)?.title || 'Следующая профессия';
+    return `${source} → ${target}`;
+});
 const transitionTargetIds = computed(() => {
     if (isAllConnections.value) {
         return new Set(displayedTransitions.value
@@ -129,7 +149,7 @@ const layout = computed(() => {
         if (!source || !target) return null;
         const sourceY = source.y + CARD_HEIGHT;
         const targetY = target.y;
-        if (isAllConnections.value) return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} L ${target.x} ${targetY}` };
+        if (isAllConnections.value) return { from: source.id, to: target.id, transition, path: `M ${source.x} ${sourceY} L ${target.x} ${targetY}` };
         const levelDistance = Number(target.market_level) - Number(source.market_level);
         if (props.connectionMode === 'incoming') {
             if (levelDistance === 1) {
@@ -154,7 +174,13 @@ const layout = computed(() => {
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
 const formatLevelRange = level => level.minSalary === level.maxSalary ? formatSalary(level.minSalary) : `${formatSalary(level.minSalary)} - ${formatSalary(level.maxSalary)}`;
-const selectNode = node => emit('select', node);
+const selectNode = node => {
+    selectedConnection.value = null;
+    emit('select', node);
+};
+const selectTransition = arrow => {
+    selectedConnection.value = arrow.transition || null;
+};
 const selectRelated = transition => {
     const targetId = props.connectionMode === 'incoming' ? transition.from_category_id : transition.to_category_id;
     const node = nodeById.value.get(targetId);
@@ -170,12 +196,26 @@ const transitionTitle = transition => {
 };
 const isOverviewArrowSelected = arrow => isAllConnections.value && activeNodeId.value !== null
     && (Number(arrow.from) === Number(activeNodeId.value) || Number(arrow.to) === Number(activeNodeId.value));
-const clearSelection = () => emit('select', null);
+const connectionDirectionClass = arrow => {
+    if (!isAllConnections.value || activeNodeId.value === null) return '';
+    if (Number(arrow.from) === Number(activeNodeId.value)) return 'diagram-line-outgoing';
+    if (Number(arrow.to) === Number(activeNodeId.value)) return 'diagram-line-incoming';
+    return 'diagram-line-overview-muted';
+};
+const markerForArrow = arrow => connectionDirectionClass(arrow) === 'diagram-line-incoming'
+    ? 'url(#diagram-arrow-incoming)'
+    : 'url(#diagram-arrow)';
+const clearSelection = () => {
+    selectedConnection.value = null;
+    emit('select', null);
+};
+watch(() => props.nodes, () => { selectedConnection.value = null; });
 </script>
 
 <style scoped>
 .diagram-shell { position: relative; }
 .transition-list { display: grid; gap: 7px; margin-top: 10px; }
+.transition-details { display: grid; gap: 8px; margin-top: 12px; }
 .transition-item { display: grid; width: 100%; gap: 3px; border: 1px solid #dfe3e0; border-left: 3px solid #008060; border-radius: 8px; background: #fff; padding: 10px 12px; text-align: left; }
 .transition-item:hover { border-color: #008060; background: #f1f8f5; }
 .transition-target { color: #202223; font-weight: 700; }
@@ -201,6 +241,9 @@ const clearSelection = () => emit('select', null);
 .diagram-transition-line { stroke-width: 3; opacity: 1; }
 .diagram-line-overview { stroke-width: 1.5; opacity: .28; }
 .diagram-line-overview-selected { stroke-width: 4; opacity: 1; }
+.diagram-line-overview-muted { opacity: .1; }
+.diagram-line-outgoing { stroke: #008060; }
+.diagram-line-incoming { stroke: #2c6ecb; }
 .diagram-level-frame { position: absolute; z-index: 1; border: 1px solid #dfe3e0; border-radius: 14px; background: #ffffff80; }
 .diagram-level-label { position: absolute; left: 12px; z-index: 2; display: grid; width: 88px; color: #6d7175; font-size: .72rem; font-weight: 700; line-height: 1.1; }
 .diagram-level-label small { margin-top: 4px; color: #8c9196; font-size: .61rem; font-weight: 600; line-height: 1.15; }
