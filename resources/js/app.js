@@ -6,7 +6,8 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createApp, h } from 'vue';
 import { ZiggyVue } from '../../vendor/tightenco/ziggy';
 
-const appName = import.meta.env.VITE_APP_NAME || 'IT Compass';
+// Название во вкладке не зависит от локальной конфигурации Laravel.
+const appName = 'IT Compass';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
