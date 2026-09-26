@@ -10,7 +10,7 @@
                 <template v-if="!displayedTransitions.length">
                     <path v-for="arrow in layout.levelArrows" :key="arrow.from" :d="arrow.path" class="diagram-line diagram-line-muted" marker-end="url(#diagram-arrow)" />
                 </template>
-                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line', connectionDirectionClass(arrow), { 'diagram-line-overview-selected': isOverviewArrowSelected(arrow) }]" :marker-end="markerForArrow(arrow)" @click.stop="selectTransition(arrow)" />
+                <path v-for="arrow in layout.transitionArrows" :key="`${arrow.from}-${arrow.to}`" :d="arrow.path" :class="['diagram-line', isAllConnections ? 'diagram-line-overview' : 'diagram-transition-line', connectionDirectionClass(arrow), { 'diagram-line-overview-selected': isOverviewArrowSelected(arrow), 'diagram-line-interactive': isArrowInteractive(arrow) }]" :marker-end="markerForArrow(arrow)" @click.stop="isArrowInteractive(arrow) && selectTransition(arrow)" />
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }"><span>Зарплатный уровень {{ level.number }}</span><small>{{ formatLevelRange(level) }}</small></div>
@@ -132,23 +132,58 @@ const layout = computed(() => {
         return { from: level.number, path: `M ${x} ${level.frameY + level.height} V ${next.frameY}` };
     });
     const positionedById = new Map(positioned.map(node => [node.id, node]));
-    const transitionArrows = displayedTransitions.value.map(transition => {
+    const connectionSide = (from, to) => {
+        const horizontalDistance = to.x - from.x;
+        const verticalDistance = (to.y + CARD_HEIGHT / 2) - (from.y + CARD_HEIGHT / 2);
+
+        if (Math.abs(horizontalDistance) > Math.abs(verticalDistance)) {
+            return horizontalDistance > 0 ? 'right' : 'left';
+        }
+
+        return verticalDistance > 0 ? 'bottom' : 'top';
+    };
+    const oppositeSide = side => ({ top: 'bottom', bottom: 'top', left: 'right', right: 'left' })[side];
+    const connectionRows = displayedTransitions.value.map(transition => {
         const source = positionedById.get(transition.from_category_id);
         const target = positionedById.get(transition.to_category_id);
         if (!source || !target) return null;
-        if (isAllConnections.value) {
-            const sourceCenterY = source.y + CARD_HEIGHT / 2;
-            const targetCenterY = target.y + CARD_HEIGHT / 2;
-            const deltaX = target.x - source.x;
-            const deltaY = targetCenterY - sourceCenterY;
-            const sourceScale = 1 / Math.max(Math.abs(deltaX) / (CARD_WIDTH / 2), Math.abs(deltaY) / (CARD_HEIGHT / 2));
-            const targetScale = 1 / Math.max(Math.abs(deltaX) / (CARD_WIDTH / 2), Math.abs(deltaY) / (CARD_HEIGHT / 2));
-            const startX = source.x + deltaX * sourceScale;
-            const startY = sourceCenterY + deltaY * sourceScale;
-            const endX = target.x - deltaX * targetScale;
-            const endY = targetCenterY - deltaY * targetScale;
 
-            return { from: source.id, to: target.id, transition, path: `M ${startX} ${startY} L ${endX} ${endY}` };
+        const sourceSide = connectionSide(source, target);
+        return { source, target, transition, sourceSide, targetSide: oppositeSide(sourceSide) };
+    }).filter(Boolean);
+
+    const ports = new Map();
+    const addPort = (node, side, connection, other) => {
+        const key = `${node.id}:${side}`;
+        if (!ports.has(key)) ports.set(key, []);
+        ports.get(key).push({ connection, other });
+    };
+    connectionRows.forEach(connection => {
+        addPort(connection.source, connection.sourceSide, connection, connection.target);
+        addPort(connection.target, connection.targetSide, connection, connection.source);
+    });
+    ports.forEach(items => {
+        items.sort((first, second) => first.other.x - second.other.x || first.other.y - second.other.y);
+        items.forEach((item, index) => { item.offset = (index + 1) / (items.length + 1); });
+    });
+    const anchorFor = (node, side, connection) => {
+        const items = ports.get(`${node.id}:${side}`) || [];
+        const offset = items.find(item => item.connection === connection)?.offset ?? .5;
+        const inset = 18;
+        const horizontal = node.x - CARD_WIDTH / 2 + inset + (CARD_WIDTH - inset * 2) * offset;
+        const vertical = node.y + inset + (CARD_HEIGHT - inset * 2) * offset;
+        if (side === 'top') return { x: horizontal, y: node.y };
+        if (side === 'bottom') return { x: horizontal, y: node.y + CARD_HEIGHT };
+        if (side === 'left') return { x: node.x - CARD_WIDTH / 2, y: vertical };
+        return { x: node.x + CARD_WIDTH / 2, y: vertical };
+    };
+
+    const transitionArrows = connectionRows.map(connection => {
+        const { source, target, transition } = connection;
+        if (isAllConnections.value) {
+            const start = anchorFor(source, connection.sourceSide, connection);
+            const end = anchorFor(target, connection.targetSide, connection);
+            return { from: source.id, to: target.id, transition, path: `M ${start.x} ${start.y} L ${end.x} ${end.y}` };
         }
         const movesDown = target.y > source.y;
         const sourceY = movesDown ? source.y + CARD_HEIGHT : source.y;
@@ -186,6 +221,8 @@ const selectTransition = arrow => {
     selectedConnection.value = arrow.transition || null;
 };
 const isOverviewArrowSelected = arrow => isAllConnections.value && activeNodeId.value !== null
+    && (Number(arrow.from) === Number(activeNodeId.value) || Number(arrow.to) === Number(activeNodeId.value));
+const isArrowInteractive = arrow => activeNodeId.value !== null
     && (Number(arrow.from) === Number(activeNodeId.value) || Number(arrow.to) === Number(activeNodeId.value));
 const connectionDirectionClass = arrow => {
     if (!isAllConnections.value || activeNodeId.value === null) return '';
@@ -227,7 +264,8 @@ watch(() => props.nodes, () => { selectedConnection.value = null; });
 .diagram-viewport { max-width: 100%; overflow: auto; padding: 4px 0 12px; border-radius: 12px; background: #f6f6f7; }
 .diagram-canvas { position: relative; margin: 0 auto; }
 .diagram-lines { position: absolute; z-index: 2; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; pointer-events: stroke; cursor: pointer; }
+.diagram-line { fill: none; stroke: #008060; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; opacity: .82; pointer-events: none; }
+.diagram-line-interactive { pointer-events: stroke; cursor: pointer; }
 .diagram-line-muted { opacity: .34; }
 .diagram-transition-line { stroke-width: 3; opacity: 1; }
 .diagram-line-overview { stroke-width: 1.5; opacity: .28; }
