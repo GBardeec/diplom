@@ -16,16 +16,26 @@
 
             <!-- Управление представлением -->
             <div class="mb-8 rounded-xl border border-[#e1e3e5] bg-white p-4 shadow-sm">
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <label class="block min-w-0 sm:w-80" for="career-direction">
+                <div class="grid gap-4 sm:grid-cols-[minmax(440px,1fr)_auto_auto] sm:items-end">
+                    <div class="sm:order-3 sm:w-auto">
+                        <span class="mb-1.5 block text-sm font-semibold text-[#202223]">Способ просмотра</span>
+                        <div class="flex h-[42px] w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Способ просмотра карты">
+                            <button @click="mapScope = 'direction'" :class="['flex-1 whitespace-nowrap rounded px-3 text-sm font-semibold transition', mapScope === 'direction' ? 'bg-white text-[#006e52] shadow-sm' : 'bg-transparent text-[#616161]']">По направлениям</button>
+                            <button @click="mapScope = 'specialization'" :class="['flex-1 whitespace-nowrap rounded px-3 text-sm font-semibold transition', mapScope === 'specialization' ? 'bg-white text-[#006e52] shadow-sm' : 'bg-transparent text-[#616161]']">По профессии</button>
+                        </div>
+                    </div>
+                    <div v-if="mapScope === 'direction'" class="relative block min-w-0 sm:order-1 sm:min-w-[440px]">
                         <span class="mb-1.5 block text-sm font-semibold text-[#202223]">Направление</span>
-                        <select id="career-direction" v-model="selectedGroupId" class="block w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20">
-                            <option v-for="group in groups" :key="group.id" :value="group.id">{{ group.title }}</option>
-                        </select>
-                    </label>
-                    <div class="flex w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
-                        <button @click="viewMode = 'table'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'table' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Таблица</button>
-                        <button @click="viewMode = 'tree'" :class="['flex-1 rounded px-4 py-2 text-sm font-semibold transition sm:flex-none', viewMode === 'tree' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Схема</button>
+                        <div class="relative"><input id="career-direction" v-model="groupQuery" type="search" autocomplete="off" class="block h-[42px] w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 pr-10 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20" placeholder="Начните вводить направление" @focus="isGroupMenuOpen = true" @input="isGroupMenuOpen = true" @keydown.esc="isGroupMenuOpen = false"/><button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#6d7175]" aria-label="Открыть список направлений" @click="isGroupMenuOpen = !isGroupMenuOpen"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 7 5 5 5-5"/></svg></button></div>
+                        <div v-if="isGroupMenuOpen" class="hierarchy-select-menu"><button v-for="group in filteredGroups" :key="group.id" type="button" class="hierarchy-select-option" @mousedown.prevent="chooseGroup(group)">{{ group.title }}</button><p v-if="!filteredGroups.length" class="hierarchy-select-empty">Ничего не найдено.</p></div>
+                    </div>
+                    <div v-else class="relative block min-w-0 sm:order-1 sm:min-w-[440px]"><span class="mb-1.5 block text-sm font-semibold text-[#202223]">Исходная профессия</span><div class="relative"><input id="career-specialization" v-model="professionQuery" type="search" autocomplete="off" class="block h-[42px] w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 pr-10 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20" placeholder="Начните вводить профессию" @focus="isProfessionMenuOpen = true" @input="isProfessionMenuOpen = true" @keydown.esc="isProfessionMenuOpen = false"/><button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#6d7175]" aria-label="Открыть список профессий" @click="isProfessionMenuOpen = !isProfessionMenuOpen"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 7 5 5 5-5"/></svg></button></div><div v-if="isProfessionMenuOpen" class="hierarchy-select-menu"><button v-for="category in filteredProfessionOptions" :key="category.id" type="button" class="hierarchy-select-option" @mousedown.prevent="chooseProfession(category)"><span>{{ category.title }}</span><small>{{ category.group_title || getGroupTitle(category.group_id) }}</small></button><p v-if="!filteredProfessionOptions.length" class="hierarchy-select-empty">Ничего не найдено.</p></div></div>
+                    <div class="sm:order-2 sm:w-auto">
+                        <span class="mb-1.5 block text-sm font-semibold text-[#202223]">Вид отображения</span>
+                        <div class="flex h-[42px] w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
+                            <button @click="viewMode = 'tree'" :class="['flex-1 rounded px-4 text-sm font-semibold transition sm:flex-none', viewMode === 'tree' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Схема</button>
+                            <button @click="viewMode = 'table'" :class="['flex-1 rounded px-4 text-sm font-semibold transition sm:flex-none', viewMode === 'table' ? 'bg-white text-[#006e52] shadow-sm' : 'text-[#616161] hover:text-[#202223]']">Таблица</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -33,7 +43,7 @@
             <!-- Табличное представление (карточный вид по уровням) -->
             <div v-if="viewMode === 'table'" class="space-y-8">
                 <div v-if="!marketCategories.length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 text-[#616161]">
-                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Зарплатный уровень появится, когда для профессии будет не менее трёх таких вакансий.
+                    {{ mapScope === 'specialization' ? 'По этой специализации пока нет профессий с достаточным числом вакансий и указанной зарплатой.' : 'Для этого направления пока недостаточно вакансий с указанной зарплатой. Зарплатный уровень появится, когда для профессии будет не менее трёх таких вакансий.' }}
                 </div>
                 <template v-for="level in maxMarketLevel" :key="level">
                 <div v-if="getCategoriesByMarketLevel(level).length" class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
@@ -71,7 +81,7 @@
             <!-- Древовидное представление -->
             <div v-else class="rounded-xl border border-[#e1e3e5] bg-white p-6 shadow-sm">
                 <div v-if="!marketCategories.length" class="text-[#616161]">
-                    Для этого направления пока недостаточно вакансий с указанной зарплатой. Зарплатный уровень появится, когда для профессии будет не менее трёх таких вакансий.
+                    {{ mapScope === 'specialization' ? 'По этой специализации пока нет профессий с достаточным числом вакансий и указанной зарплатой.' : 'Для этого направления пока недостаточно вакансий с указанной зарплатой. Зарплатный уровень появится, когда для профессии будет не менее трёх таких вакансий.' }}
                 </div>
                 <template v-else>
                     <div class="flex justify-between items-center mb-3">
@@ -89,6 +99,7 @@
                         :nodes="diagramNodes"
                         :transitions="diagramTransitions"
                         :selected-id="selectedTreeNode?.id"
+                        :use-global-salary-levels="mapScope === 'specialization'"
                         connection-mode="all"
                         @select="handleTreeSelect"
                         @show-details="handleTreeShowDetails"
@@ -350,6 +361,12 @@ const isCategoryModalOpen = ref(false);
 const isSkillsExpanded = ref(false);
 const isLocationsExpanded = ref(false);
 const selectedGroupId = ref(null);
+const mapScope = ref('direction');
+const specializationCategoryId = ref(null);
+const groupQuery = ref('');
+const professionQuery = ref('');
+const isGroupMenuOpen = ref(false);
+const isProfessionMenuOpen = ref(false);
 const viewMode = ref('tree');
 const selectedTreeNode = ref(null);
 const selectedSkillsGradeId = ref(null);
@@ -398,6 +415,37 @@ const maxSalaryTimelineValue = computed(() => Math.max(1, ...salaryTimeline.valu
 const mainCategories = computed(() => {
     return props.categories.filter(c => (c.sort_order || 0) !== 99);
 });
+const filteredGroups = computed(() => {
+    const query = groupQuery.value.trim().toLocaleLowerCase('ru-RU');
+    return props.groups.filter(group => group.title.toLocaleLowerCase('ru-RU').includes(query));
+});
+const professionOptions = computed(() => mainCategories.value.filter(category => category.market_level));
+const filteredProfessionOptions = computed(() => {
+    const query = professionQuery.value.trim().toLocaleLowerCase('ru-RU');
+    return professionOptions.value.filter(category => category.title.toLocaleLowerCase('ru-RU').includes(query));
+});
+const chooseGroup = (group) => {
+    selectedGroupId.value = group.id;
+    groupQuery.value = group.title;
+    isGroupMenuOpen.value = false;
+};
+const chooseProfession = (category) => {
+    specializationCategoryId.value = category.id;
+    professionQuery.value = category.title;
+    isProfessionMenuOpen.value = false;
+};
+
+watch(mainCategories, (categories) => {
+    const available = categories.filter(category => category.market_level);
+    if (!available.some(category => Number(category.id) === Number(specializationCategoryId.value))) {
+        specializationCategoryId.value = available[0]?.id ?? null;
+    }
+}, { immediate: true });
+
+watch(specializationCategoryId, (categoryId) => {
+    const category = professionOptions.value.find(item => Number(item.id) === Number(categoryId));
+    if (category) professionQuery.value = category.title;
+}, { immediate: true });
 
 // Категории "Другое" для отдельного отображения
 const otherCategories = computed(() => {
@@ -410,6 +458,11 @@ watch(() => props.groups, (groups) => {
             ? requestedGroupId
             : groups[0]?.id ?? null;
     }
+}, { immediate: true });
+
+watch(selectedGroupId, (groupId) => {
+    const group = props.groups.find(item => Number(item.id) === Number(groupId));
+    if (group) groupQuery.value = group.title;
 }, { immediate: true });
 
 watch(selectedGroupId, () => {
@@ -428,14 +481,48 @@ const filteredOtherCategories = computed(() => {
     return otherCategories.value.filter(c => c.group_id === selectedGroupId.value);
 });
 
-const marketCategories = computed(() => filteredCategories.value.filter(category => category.market_level));
+const specializationCategories = computed(() => {
+    if (!specializationCategoryId.value) return [];
+    const ids = new Set([Number(specializationCategoryId.value)]);
+    props.transitions.forEach(transition => {
+        if (Number(transition.from_category_id) === Number(specializationCategoryId.value)) ids.add(Number(transition.to_category_id));
+        if (Number(transition.to_category_id) === Number(specializationCategoryId.value)) ids.add(Number(transition.from_category_id));
+    });
+    return mainCategories.value.filter(category => category.market_level && ids.has(Number(category.id)));
+});
+const marketCategories = computed(() => (mapScope.value === 'specialization' ? specializationCategories.value : filteredCategories.value).filter(category => category.market_level));
 const maxMarketLevel = computed(() => Math.max(0, ...marketCategories.value.map(category => Number(category.market_level))));
-const diagramNodes = computed(() => marketCategories.value);
-const diagramTransitions = computed(() => props.transitions.filter(transition =>
-    Number(transition.group_id) === Number(selectedGroupId.value)
-    && diagramNodes.value.some(node => Number(node.id) === Number(transition.from_category_id))
-    && diagramNodes.value.some(node => Number(node.id) === Number(transition.to_category_id))
-));
+const diagramNodes = computed(() => {
+    const categories = [...marketCategories.value];
+
+    // В режиме специализации профессии могут быть из разных направлений.
+    // Их исходные market_level рассчитаны внутри своих направлений, поэтому
+    // для одной общей схемы назначаем уровни по единой шкале медианных зарплат.
+    if (mapScope.value !== 'specialization') return categories;
+
+    const sorted = [...categories].sort((first, second) => Number(first.market_salary_median) - Number(second.market_salary_median));
+    const buckets = Math.min(5, sorted.length);
+    const levelsById = new Map(sorted.map((category, index) => [
+        Number(category.id),
+        Math.min(buckets, Math.floor(index * buckets / sorted.length) + 1),
+    ]));
+
+    return categories.map(category => ({ ...category, diagram_level: levelsById.get(Number(category.id)) }));
+});
+const diagramTransitions = computed(() => {
+    const nodesById = new Map(diagramNodes.value.map(node => [Number(node.id), node]));
+
+    return props.transitions.filter(transition => {
+        if (mapScope.value !== 'specialization' && Number(transition.group_id) !== Number(selectedGroupId.value)) return false;
+
+        const source = nodesById.get(Number(transition.from_category_id));
+        const target = nodesById.get(Number(transition.to_category_id));
+
+        // На карте специализации направление стрелки всегда соответствует
+        // росту медианной зарплаты, а не локальному номеру уровня направления.
+        return Boolean(source && target && Number(target.market_salary_median) > Number(source.market_salary_median));
+    });
+});
 
 const groupMap = computed(() => new Map(props.groups.map(g => [g.id, g.title])));
 const getGroupTitle = (groupId) => groupMap.value.get(groupId) || 'Неизвестно';
@@ -569,5 +656,35 @@ const handleTreeShowDetails = (node) => {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.5);
 }
+
+.hierarchy-select-menu {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 4px);
+    right: 0;
+    left: 0;
+    max-height: 280px;
+    overflow-y: auto;
+    border: 1px solid #c9cccf;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(32, 34, 35, .14);
+}
+
+.hierarchy-select-option {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 12px;
+    color: #202223;
+    font-size: .875rem;
+    text-align: left;
+}
+
+.hierarchy-select-option:hover { background: #f1f8f5; color: #006e52; }
+.hierarchy-select-option small { color: #6d7175; font-size: .75rem; }
+.hierarchy-select-empty { padding: 10px 12px; color: #6d7175; font-size: .875rem; }
 
 </style>

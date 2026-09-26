@@ -14,8 +14,9 @@
             </svg>
             <div v-for="level in layout.levels" :key="`frame-${level.number}`" class="diagram-level-frame" :style="{ left: `${level.x}px`, top: `${level.frameY}px`, width: `${level.width}px`, height: `${level.height}px` }"></div>
             <div v-for="level in layout.levels" :key="level.number" class="diagram-level-label" :style="{ top: `${level.y + 8}px` }"><span>Зарплатный уровень {{ level.number }}</span><small>{{ formatLevelRange(level) }}</small></div>
-            <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" @click="selectNode(node)">
-                <span class="diagram-node-title">{{ node.title }}</span>
+            <button v-for="node in layout.nodes" :key="node.id" type="button" class="diagram-node" :class="{ 'diagram-node-selected': activeNodeId === node.id, 'diagram-node-target': transitionTargetIds.has(node.id) }" :style="{ left: `${node.x}px`, top: `${node.y}px` }" :title="node.title" @click="selectNode(node)">
+                <span class="diagram-node-title"><span class="diagram-node-title-text">{{ node.title }}</span></span>
+                <span v-if="node.group_title" class="diagram-node-group">{{ node.group_title }}</span>
                 <span class="diagram-node-meta">Медиана {{ formatSalary(node.market_salary_median) }}</span>
                 <span class="diagram-node-sample">{{ node.market_salary_sample_size }} вакансий с зарплатой</span>
             </button>
@@ -49,10 +50,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 
-const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null }, connectionMode: { type: String, default: 'outgoing' } });
+const props = defineProps({ nodes: { type: Array, required: true }, transitions: { type: Array, default: () => [] }, selectedId: { type: Number, default: null }, connectionMode: { type: String, default: 'outgoing' }, useGlobalSalaryLevels: { type: Boolean, default: false } });
 const emit = defineEmits(['select', 'show-details']);
-const CARD_WIDTH = 166;
-const CARD_HEIGHT = 98;
+const CARD_WIDTH = 200;
+const CARD_HEIGHT = 120;
 const NODE_GAP = 32;
 const LEVEL_GAP = 72;
 const LEFT_PADDING = 106;
@@ -63,8 +64,9 @@ const activeNodeId = computed(() => props.selectedId);
 const activeNode = computed(() => nodeById.value.get(activeNodeId.value) || null);
 const selectedConnection = ref(null);
 const isAllConnections = computed(() => props.connectionMode === 'all');
-const lowestMarketLevel = computed(() => Math.min(...props.nodes.map(node => Number(node.market_level))));
-const highestMarketLevel = computed(() => Math.max(...props.nodes.map(node => Number(node.market_level))));
+const displayLevel = node => Number(props.useGlobalSalaryLevels ? node.diagram_level : node.market_level);
+const lowestMarketLevel = computed(() => Math.min(...props.nodes.map(displayLevel)));
+const highestMarketLevel = computed(() => Math.max(...props.nodes.map(displayLevel)));
 const noTransitionsMessage = computed(() => {
     if (!activeNode.value) return '';
 
@@ -72,11 +74,11 @@ const noTransitionsMessage = computed(() => {
         return 'Для этой профессии пока нет подтверждённых связей с другими профессиями на карте.';
     }
 
-    if (props.connectionMode === 'outgoing' && Number(activeNode.value.market_level) === highestMarketLevel.value) {
+    if (props.connectionMode === 'outgoing' && displayLevel(activeNode.value) === highestMarketLevel.value) {
         return 'Эта профессия находится на верхнем зарплатном уровне выбранного направления. На карте нет более высоких профессий для дальнейшего перехода.';
     }
 
-    if (props.connectionMode === 'incoming' && Number(activeNode.value.market_level) === lowestMarketLevel.value) {
+    if (props.connectionMode === 'incoming' && displayLevel(activeNode.value) === lowestMarketLevel.value) {
         return 'Эта профессия находится на начальном зарплатном уровне выбранного направления. На карте нет более ранних профессий, из которых можно перейти в неё.';
     }
 
@@ -104,13 +106,12 @@ const transitionTargetIds = computed(() => {
 const layout = computed(() => {
     const byLevel = new Map();
     props.nodes.forEach(node => {
-        const level = Number(node.market_level);
+        const level = displayLevel(node);
         if (!byLevel.has(level)) byLevel.set(level, []);
         byLevel.get(level).push(node);
     });
     const maxCount = Math.max(1, ...[...byLevel.values()].map(nodes => nodes.length));
-    const maxLevel = Math.max(1, ...[...byLevel.keys()]);
-    const levelNumbers = Array.from({ length: maxLevel }, (_, index) => index + 1);
+    const levelNumbers = [...byLevel.keys()].sort((first, second) => first - second);
     const width = Math.max(760, LEFT_PADDING * 2 + maxCount * CARD_WIDTH + Math.max(0, maxCount - 1) * NODE_GAP);
     const positioned = [];
     levelNumbers.forEach((level, index) => {
@@ -135,10 +136,24 @@ const layout = computed(() => {
         const source = positionedById.get(transition.from_category_id);
         const target = positionedById.get(transition.to_category_id);
         if (!source || !target) return null;
-        const sourceY = source.y + CARD_HEIGHT;
-        const targetY = target.y;
-        if (isAllConnections.value) return { from: source.id, to: target.id, transition, path: `M ${source.x} ${sourceY} L ${target.x} ${targetY}` };
-        const levelDistance = Number(target.market_level) - Number(source.market_level);
+        if (isAllConnections.value) {
+            const sourceCenterY = source.y + CARD_HEIGHT / 2;
+            const targetCenterY = target.y + CARD_HEIGHT / 2;
+            const deltaX = target.x - source.x;
+            const deltaY = targetCenterY - sourceCenterY;
+            const sourceScale = 1 / Math.max(Math.abs(deltaX) / (CARD_WIDTH / 2), Math.abs(deltaY) / (CARD_HEIGHT / 2));
+            const targetScale = 1 / Math.max(Math.abs(deltaX) / (CARD_WIDTH / 2), Math.abs(deltaY) / (CARD_HEIGHT / 2));
+            const startX = source.x + deltaX * sourceScale;
+            const startY = sourceCenterY + deltaY * sourceScale;
+            const endX = target.x - deltaX * targetScale;
+            const endY = targetCenterY - deltaY * targetScale;
+
+            return { from: source.id, to: target.id, transition, path: `M ${startX} ${startY} L ${endX} ${endY}` };
+        }
+        const movesDown = target.y > source.y;
+        const sourceY = movesDown ? source.y + CARD_HEIGHT : source.y;
+        const targetY = movesDown ? target.y : target.y + CARD_HEIGHT;
+        const levelDistance = displayLevel(target) - displayLevel(source);
         if (props.connectionMode === 'incoming') {
             if (levelDistance === 1) {
                 const middleY = sourceY + (targetY - sourceY) / 2;
@@ -148,17 +163,18 @@ const layout = computed(() => {
             const laneX = width - 16;
             return { from: source.id, to: target.id, path: `M ${target.x} ${targetY} V ${targetY - 16} H ${laneX} V ${sourceY + 16} H ${source.x} V ${sourceY}` };
         }
-        if (levelDistance === 1) {
+        if (Math.abs(levelDistance) === 1) {
             const middleY = sourceY + (targetY - sourceY) / 2;
-            return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${middleY} H ${target.x} V ${targetY}` };
+            return { from: source.id, to: target.id, transition, path: `M ${source.x} ${sourceY} V ${middleY} H ${target.x} V ${targetY}` };
         }
 
         const laneX = width - 16;
-        const sourceExitY = sourceY + 16;
-        const targetEntryY = targetY - 16;
-        return { from: source.id, to: target.id, path: `M ${source.x} ${sourceY} V ${sourceExitY} H ${laneX} V ${targetEntryY} H ${target.x} V ${targetY}` };
+        const direction = movesDown ? 1 : -1;
+        const sourceExitY = sourceY + direction * 16;
+        const targetEntryY = targetY - direction * 16;
+        return { from: source.id, to: target.id, transition, path: `M ${source.x} ${sourceY} V ${sourceExitY} H ${laneX} V ${targetEntryY} H ${target.x} V ${targetY}` };
     }).filter(Boolean);
-    return { width, height: TOP_PADDING + maxLevel * CARD_HEIGHT + Math.max(0, maxLevel - 1) * LEVEL_GAP + 28, nodes: positioned, levelArrows, transitionArrows, levels };
+    return { width, height: TOP_PADDING + levelNumbers.length * CARD_HEIGHT + Math.max(0, levelNumbers.length - 1) * LEVEL_GAP + 28, nodes: positioned, levelArrows, transitionArrows, levels };
 });
 const canvasStyle = computed(() => ({ width: `${layout.value.width}px`, height: `${layout.value.height}px` }));
 const formatLevelRange = level => level.minSalary === level.maxSalary ? formatSalary(level.minSalary) : `${formatSalary(level.minSalary)} - ${formatSalary(level.maxSalary)}`;
@@ -222,11 +238,14 @@ watch(() => props.nodes, () => { selectedConnection.value = null; });
 .diagram-level-frame { position: absolute; z-index: 1; border: 1px solid #dfe3e0; border-radius: 14px; background: #ffffff80; }
 .diagram-level-label { position: absolute; left: 12px; z-index: 2; display: grid; width: 88px; color: #6d7175; font-size: .72rem; font-weight: 700; line-height: 1.1; }
 .diagram-level-label small { margin-top: 4px; color: #8c9196; font-size: .61rem; font-weight: 600; line-height: 1.15; }
-.diagram-node { position: absolute; z-index: 3; width: 166px; height: 98px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px; border: 1px solid #d2d5d8; border-radius: 10px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.08); color: #202223; cursor: pointer; transform: translateX(-50%); transition: transform .2s, border-color .2s, box-shadow .2s; }
+.diagram-node { position: absolute; z-index: 3; width: 200px; height: 120px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px; border: 1px solid #d2d5d8; border-radius: 10px; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,.08); color: #202223; cursor: pointer; transform: translateX(-50%); transition: transform .2s, border-color .2s, box-shadow .2s; }
 .diagram-node:hover { transform: translateX(-50%) translateY(-3px); border-color: #008060; box-shadow: 0 6px 14px rgba(0,128,96,.14); }
 .diagram-node-selected { border-color: #008060; box-shadow: 0 0 0 3px rgba(0,128,96,.16), 0 6px 14px rgba(0,128,96,.14); }
 .diagram-node-target { border-color: #5c9f83; background: #f1f8f5; }
-.diagram-node-title { display: -webkit-box; overflow: hidden; text-align: center; font-size: .82rem; font-weight: 700; line-height: 1.15; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.diagram-node > span { flex-shrink: 0; }
+.diagram-node-title { display: flex; width: 100%; min-height: 2.3em; align-items: center; justify-content: center; }
+.diagram-node-title-text { display: -webkit-box; overflow: hidden; text-align: center; text-overflow: ellipsis; font-size: .82rem; font-weight: 700; line-height: 1.15; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.diagram-node-group { color: #6d7175; font-size: .66rem; font-weight: 600; }
 .diagram-node-meta { color: #006e52; font-size: .72rem; font-weight: 700; }
 .diagram-node-sample { color: #6d7175; font-size: .67rem; }
 @media (max-width: 640px) { .diagram-inspector { right: 12px; bottom: 12px; left: 12px; width: auto; max-height: min(68vh, 500px); } .diagram-inspector-header { align-items: flex-start; flex-direction: column; } .diagram-inspector-actions { width: 100%; } .diagram-details-button { flex: 1; } }

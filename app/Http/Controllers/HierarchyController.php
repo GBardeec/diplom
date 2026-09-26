@@ -36,7 +36,7 @@ class HierarchyController extends Controller
 
     private function buildHierarchyData(): array
     {
-        $categories = VacancyCategory::with(['parent'])
+        $categories = VacancyCategory::with(['parent', 'group'])
             ->withCount('vacancies')
             ->orderBy('market_level')
             ->orderBy('sort_order')
@@ -57,6 +57,7 @@ class HierarchyController extends Controller
                     'market_salary_sample_size' => $category->market_salary_sample_size,
                     'parent_id' => $category->parent_id,
                     'group_id' => $category->group_id,
+                    'group_title' => $category->group?->title,
                     'sort_order' => $category->sort_order,
                     'vacancies_count' => $category->vacancies_count,
                     'locations_count' => $stats['locations_count'],

@@ -174,6 +174,31 @@ class CareerMapService
             });
         });
 
+        // Межнаправленные переходы считаются отдельно: зарплатные уровни
+        // внутри направлений несопоставимы, поэтому сравнивается медиана зарплаты.
+        $marketCategories->each(function (array $source) use ($marketCategories, $skillsByCategory, &$rows) {
+            $sourceSkills = $this->specialistSkills($skillsByCategory->get($source['id'], []));
+            if (!$sourceSkills) return;
+
+            $marketCategories
+                ->filter(fn (array $target) => $target['group_id'] !== $source['group_id'] && $target['market_salary_median'] > $source['market_salary_median'])
+                ->map(function (array $target) use ($sourceSkills, $skillsByCategory) {
+                    $targetSkills = $this->specialistSkills($skillsByCategory->get($target['id'], []));
+                    $common = array_values(array_intersect($sourceSkills, $targetSkills));
+                    $coverage = count($targetSkills) ? count($common) / count($targetSkills) : 0;
+                    $target['common_skills_count'] = count($common);
+                    $target['target_coverage'] = $coverage;
+                    $target['similarity'] = $coverage;
+                    return $target;
+                })
+                ->filter(fn (array $target) => $target['common_skills_count'] >= self::MIN_COMMON_SPECIALIST_SKILLS && $target['target_coverage'] >= self::MIN_TARGET_SKILL_COVERAGE)
+                ->sortByDesc('similarity')
+                ->take(2)
+                ->each(function (array $target) use ($source, &$rows) {
+                    $rows[] = ['from_category_id' => $source['id'], 'to_category_id' => $target['id'], 'skills_similarity' => round($target['similarity'], 4), 'created_at' => now(), 'updated_at' => now()];
+                });
+        });
+
         if ($rows) {
             DB::table('career_transitions')->insert($rows);
         }
