@@ -27,9 +27,9 @@
                     <div v-if="mapScope === 'direction'" class="relative block min-w-0 sm:order-1 sm:min-w-[440px]">
                         <span class="mb-1.5 block text-sm font-semibold text-[#202223]">Направление</span>
                         <div class="relative"><input id="career-direction" v-model="groupQuery" type="search" autocomplete="off" class="block h-[42px] w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 pr-10 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20" placeholder="Начните вводить направление" @focus="prepareGroupSearch" @input="isGroupMenuOpen = true" @keydown.esc="isGroupMenuOpen = false"/><button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#6d7175]" aria-label="Открыть список направлений" @click="isGroupMenuOpen = !isGroupMenuOpen"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 7 5 5 5-5"/></svg></button></div>
-                        <div v-if="isGroupMenuOpen" class="hierarchy-select-menu"><button v-for="group in filteredGroups" :key="group.id" type="button" class="hierarchy-select-option" @mousedown.prevent="chooseGroup(group)">{{ group.title }}</button><p v-if="!filteredGroups.length" class="hierarchy-select-empty">Ничего не найдено.</p></div>
+                        <div v-if="isGroupMenuOpen" class="hierarchy-select-menu"><button v-for="group in rankedGroups" :key="group.id" type="button" class="hierarchy-select-option" @mousedown.prevent="chooseGroup(group)"><span v-for="(part, index) in highlightedParts(group.title, groupQuery)" :key="`${group.id}-${index}`" :class="{ 'hierarchy-select-match': part.matched }">{{ part.text }}</span></button></div>
                     </div>
-                    <div v-else class="relative block min-w-0 sm:order-1 sm:min-w-[440px]"><span class="mb-1.5 block text-sm font-semibold text-[#202223]">Исходная профессия</span><div class="relative"><input id="career-specialization" v-model="professionQuery" type="search" autocomplete="off" class="block h-[42px] w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 pr-10 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20" placeholder="Начните вводить профессию" @focus="prepareProfessionSearch" @input="isProfessionMenuOpen = true" @keydown.esc="isProfessionMenuOpen = false"/><button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#6d7175]" aria-label="Открыть список профессий" @click="isProfessionMenuOpen = !isProfessionMenuOpen"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 7 5 5 5-5"/></svg></button></div><div v-if="isProfessionMenuOpen" class="hierarchy-select-menu"><button v-for="category in filteredProfessionOptions" :key="category.id" type="button" class="hierarchy-select-option" @mousedown.prevent="chooseProfession(category)"><span>{{ category.title }}</span><small>{{ category.group_title || getGroupTitle(category.group_id) }}</small></button><p v-if="!filteredProfessionOptions.length" class="hierarchy-select-empty">Ничего не найдено.</p></div></div>
+                    <div v-else class="relative block min-w-0 sm:order-1 sm:min-w-[440px]"><span class="mb-1.5 block text-sm font-semibold text-[#202223]">Исходная профессия</span><div class="relative"><input id="career-specialization" v-model="professionQuery" type="search" autocomplete="off" class="block h-[42px] w-full rounded-md border border-[#c9cccf] bg-white px-3 py-2 pr-10 text-sm font-medium text-[#202223] outline-none transition focus:border-[#008060] focus:ring-2 focus:ring-[#008060]/20" placeholder="Начните вводить профессию" @focus="prepareProfessionSearch" @input="isProfessionMenuOpen = true" @keydown.esc="isProfessionMenuOpen = false"/><button type="button" class="absolute inset-y-0 right-0 grid w-10 place-items-center text-[#6d7175]" aria-label="Открыть список профессий" @click="isProfessionMenuOpen = !isProfessionMenuOpen"><svg class="h-4 w-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 7 5 5 5-5"/></svg></button></div><div v-if="isProfessionMenuOpen" class="hierarchy-select-menu"><button v-for="category in rankedProfessionOptions" :key="category.id" type="button" class="hierarchy-select-option" @mousedown.prevent="chooseProfession(category)"><span v-for="(part, index) in highlightedParts(category.title, professionQuery)" :key="`${category.id}-${index}`" :class="{ 'hierarchy-select-match': part.matched }">{{ part.text }}</span><small>{{ category.group_title || getGroupTitle(category.group_id) }}</small></button></div></div>
                     <div class="sm:order-2 sm:w-auto">
                         <span class="mb-1.5 block text-sm font-semibold text-[#202223]">Вид отображения</span>
                         <div class="flex h-[42px] w-full rounded-md border border-[#c9cccf] bg-[#f6f6f7] p-1 sm:w-auto" aria-label="Вид структуры">
@@ -415,15 +415,27 @@ const maxSalaryTimelineValue = computed(() => Math.max(1, ...salaryTimeline.valu
 const mainCategories = computed(() => {
     return props.categories.filter(c => (c.sort_order || 0) !== 99);
 });
-const filteredGroups = computed(() => {
-    const query = groupQuery.value.trim().toLocaleLowerCase('ru-RU');
-    return props.groups.filter(group => group.title.toLocaleLowerCase('ru-RU').includes(query));
-});
+const rankOptions = (options, query) => {
+    const normalizedQuery = query.trim().toLocaleLowerCase('ru-RU');
+    if (!normalizedQuery) return options;
+    const matched = [];
+    const remaining = [];
+    options.forEach(option => (option.title.toLocaleLowerCase('ru-RU').includes(normalizedQuery) ? matched : remaining).push(option));
+    return [...matched, ...remaining];
+};
+const highlightedParts = (title, query) => {
+    const normalizedQuery = query.trim();
+    const matchIndex = title.toLocaleLowerCase('ru-RU').indexOf(normalizedQuery.toLocaleLowerCase('ru-RU'));
+    if (!normalizedQuery || matchIndex < 0) return [{ text: title, matched: false }];
+    return [
+        { text: title.slice(0, matchIndex), matched: false },
+        { text: title.slice(matchIndex, matchIndex + normalizedQuery.length), matched: true },
+        { text: title.slice(matchIndex + normalizedQuery.length), matched: false },
+    ].filter(part => part.text);
+};
+const rankedGroups = computed(() => rankOptions(props.groups, groupQuery.value));
 const professionOptions = computed(() => mainCategories.value.filter(category => category.market_level));
-const filteredProfessionOptions = computed(() => {
-    const query = professionQuery.value.trim().toLocaleLowerCase('ru-RU');
-    return professionOptions.value.filter(category => category.title.toLocaleLowerCase('ru-RU').includes(query));
-});
+const rankedProfessionOptions = computed(() => rankOptions(professionOptions.value, professionQuery.value));
 const chooseGroup = (group) => {
     selectedGroupId.value = group.id;
     groupQuery.value = group.title;
@@ -435,11 +447,11 @@ const chooseProfession = (category) => {
     isProfessionMenuOpen.value = false;
 };
 const prepareGroupSearch = (event) => {
-    isGroupMenuOpen.value = false;
+    isGroupMenuOpen.value = true;
     event.target.select();
 };
 const prepareProfessionSearch = (event) => {
-    isProfessionMenuOpen.value = false;
+    isProfessionMenuOpen.value = true;
     event.target.select();
 };
 
@@ -692,6 +704,7 @@ const handleTreeShowDetails = (node) => {
 }
 
 .hierarchy-select-option:hover { background: #f1f8f5; color: #006e52; }
+.hierarchy-select-match { background: #d9f1e7; color: #006e52; font-weight: 700; }
 .hierarchy-select-option small { color: #6d7175; font-size: .75rem; }
 .hierarchy-select-empty { padding: 10px 12px; color: #6d7175; font-size: .875rem; }
 
