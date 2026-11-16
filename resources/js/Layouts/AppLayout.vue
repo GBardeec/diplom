@@ -41,7 +41,7 @@ const menuOpen = ref(false);
         <footer class="border-t border-[#e1e3e5] bg-white py-5">
             <div class="mx-auto flex max-w-7xl flex-col gap-1 px-4 text-sm text-[#6d7175] sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
                 <p>IT Compass</p>
-                <p>Разработал Мухаматдинов И. Р. · Научный руководитель Лашкарев А. Н.</p>
+                <p>Разработчик: Мухаматдинов И. Р. · Научный руководитель: Лашкарев А. Н.</p>
             </div>
         </footer>
     </div>
