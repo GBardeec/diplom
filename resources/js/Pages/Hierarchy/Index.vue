@@ -593,7 +593,7 @@ watch([selectedEmploymentMonth, selectedEmploymentGradeId], ([month, gradeId]) =
 
 const formatPublicationMonth = (value) => {
     const date = new Date(`${value}T00:00:00`);
-    return new Intl.DateTimeFormat('ru-RU', { month: 'short', year: '2-digit' }).format(date).replace(/\./g, '').replace(/\s*г$/u, '');
+    return new Intl.DateTimeFormat('ru-RU', { month: 'short', year: '2-digit' }).format(date).replace(/\./g, '').replace(' г', '');
 };
 
 const getEmploymentType = (type) => {

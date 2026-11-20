@@ -226,8 +226,6 @@ class VacancyDataProvider extends AbstractDataProvider
                     $this->saveSalary($vacancy, $salaryData);
                 });
 
-                echo "Saved/Updated vacancy: {$vacancyData['title']} (ID: {$vacancyData['external_id']})\n";
-
             } catch (Exception $e) {
                 Log::error('Failed to save vacancy', [
                     'external_id' => $vacancyData['external_id'] ?? 'unknown',
